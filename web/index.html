@@ -1,0 +1,1143 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Catchdle</title>
+
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+    <!-- =========================================
+         BACKGROUND COLLAGE
+    ========================================== -->
+
+    <div
+        id="backgroundCollage"
+        class="background-collage"
+    ></div>
+
+    <div class="background-overlay"></div>
+
+
+    <!-- =========================================
+         HEADER
+    ========================================== -->
+
+    <header class="topbar">
+
+        <div class="topbar-left">
+            <div class="topbar-logo">
+                Catch<span>dle</span>
+            </div>
+
+            <button
+                id="creditsButton"
+                class="credits-button"
+                type="button"
+                title="Credits"
+            >
+                <span class="credits-icon">✦</span>
+                <span>CREDITS</span>
+            </button>
+        </div>
+
+
+        <div
+            id="userArea"
+            class="user-area"
+        >
+
+            <!-- LOGIN -->
+
+            <a
+                id="loginButton"
+                class="login-button"
+                href="/auth/login"
+            >
+                LOGIN WITH OSU!
+            </a>
+
+
+            <!-- LOGGED USER -->
+
+            <div
+                id="loggedUser"
+                class="logged-user hidden"
+            >
+
+                <button
+                    id="profileButton"
+                    class="profile-button"
+                    type="button"
+                    title="My Statistics"
+                >
+                    <img
+                        id="userAvatar"
+                        class="user-avatar"
+                        src=""
+                        alt="Avatar"
+                    >
+
+                    <span
+                        id="username"
+                        class="username"
+                    >
+                        User
+                    </span>
+                </button>
+
+                <a
+                    class="logout-button"
+                    href="/auth/logout"
+                >
+                    LOGOUT
+                </a>
+
+            </div>
+
+        </div>
+
+    </header>
+
+
+    <!-- =========================================
+         MAIN
+    ========================================== -->
+
+    <main class="container">
+
+
+        <!-- =====================================
+             LOGO
+        ====================================== -->
+
+        <section class="hero">
+
+            <div class="logo-wrapper">
+
+                <h1 class="logo">
+                    <span class="logo-white">Catch</span><span class="logo-pink">dle</span>
+                </h1>
+
+
+                <span class="logo-ctb">
+                    CTB
+                </span>
+                
+            </div>
+
+
+            <p class="subtitle">
+                Guess the daily osu!catch beatmapset
+            </p>
+
+        </section>
+
+
+
+        <!-- =====================================
+             HOW TO PLAY
+        ====================================== -->
+
+        <section class="how-to-play">
+
+            <h2>
+                How to Play
+            </h2>
+
+
+            <p>
+
+                Guess the daily osu!catch beatmapset in
+                <strong>10 attempts.</strong>
+
+            </p>
+
+
+            <p>
+
+                Choose a beatmapset and compare its information with
+                today's answer. The colors and arrows show how close
+                your guess is.
+
+            </p>
+
+
+            <div class="legend">
+
+
+                <div class="legend-item">
+
+                    <span class="legend-icon correct-icon">
+                        ✓
+                    </span>
+
+                    <span>
+                        <strong>Green</strong>
+                        means the value is correct.
+                    </span>
+
+                </div>
+
+
+                <div class="legend-item">
+
+                    <span class="legend-icon close-icon">
+                        ≈
+                    </span>
+
+                    <span>
+                        <strong>Yellow</strong>
+                        means the value is close.
+                    </span>
+
+                </div>
+
+
+                <div class="legend-item">
+
+                    <span class="legend-icon wrong-icon">
+                        ×
+                    </span>
+
+                    <span>
+                        <strong>Red</strong>
+                        means the value is incorrect.
+                    </span>
+
+                </div>
+
+
+                <div class="legend-item">
+
+                    <span class="legend-icon arrow-icon">
+                        ↕
+                    </span>
+
+                    <span>
+                        Arrows show whether the correct value is higher or lower.
+                    </span>
+
+                </div>
+
+
+            </div>
+
+
+
+            <div class="clue-explanation">
+
+                <h3>
+                    Clues
+                </h3>
+
+
+                <p>
+
+                    <strong>After 4 attempts:</strong>
+                    CS, AR, OD and HP can be revealed.
+
+                </p>
+
+
+                <p>
+
+                    <strong>After 7 attempts:</strong>
+                    the difficulty name can be revealed.
+
+                </p>
+
+
+                <p>
+
+                    <strong>After 9 attempts:</strong>
+                    the map background can be revealed.
+
+                </p>
+
+            </div>
+
+
+            <p class="highest-rated">
+
+                Only the highest-rated osu!catch difficulty from each
+                beatmapset is used.
+
+            </p>
+
+        </section>
+
+
+
+        <!-- =====================================
+             ATTEMPT COUNTER
+        ====================================== -->
+
+        <div class="attempt-counter">
+
+            <span id="attemptCount">
+                0
+            </span>
+
+            / 10 ATTEMPTS
+
+        </div>
+
+
+
+        <!-- =====================================
+             CLUES
+        ====================================== -->
+
+        <section class="clues-section">
+
+
+            <div class="section-title">
+                AVAILABLE CLUES
+            </div>
+
+
+            <div class="clues-grid">
+
+
+                <!-- CS AR OD HP -->
+
+                <button
+                    id="clueStats"
+                    class="clue-button locked"
+                    disabled
+                >
+
+                    <span class="clue-name">
+                        CS / AR / OD / HP
+                    </span>
+
+
+                    <span
+                        id="clueStatsStatus"
+                        class="clue-status"
+                    >
+                        🔒 4 ATTEMPTS
+                    </span>
+
+                </button>
+
+
+
+                <!-- DIFFICULTY -->
+
+                <button
+                    id="clueDifficulty"
+                    class="clue-button locked"
+                    disabled
+                >
+
+                    <span class="clue-name">
+                        DIFFICULTY
+                    </span>
+
+
+                    <span
+                        id="clueDifficultyStatus"
+                        class="clue-status"
+                    >
+                        🔒 7 ATTEMPTS
+                    </span>
+
+                </button>
+
+
+
+                <!-- BACKGROUND -->
+
+                <button
+                    id="clueBackground"
+                    class="clue-button locked"
+                    disabled
+                >
+
+                    <span class="clue-name">
+                        BACKGROUND
+                    </span>
+
+
+                    <span
+                        id="clueBackgroundStatus"
+                        class="clue-status"
+                    >
+                        🔒 9 ATTEMPTS
+                    </span>
+
+                </button>
+
+
+            </div>
+
+
+
+            <!-- =================================
+                 REVEALED CLUES
+            ================================== -->
+
+            <div
+                id="revealedClues"
+                class="revealed-clues"
+            >
+
+
+                <!-- STATS -->
+
+                <div
+                    id="statsClue"
+                    class="revealed-clue hidden"
+                >
+
+                    <div class="revealed-clue-title">
+                        MAP STATS
+                    </div>
+
+
+                    <div class="stats-grid">
+
+
+                        <div class="stat-card">
+
+                            <span>
+                                CS
+                            </span>
+
+                            <strong id="clueCS">
+                                -
+                            </strong>
+
+                        </div>
+
+
+                        <div class="stat-card">
+
+                            <span>
+                                AR
+                            </span>
+
+                            <strong id="clueAR">
+                                -
+                            </strong>
+
+                        </div>
+
+
+                        <div class="stat-card">
+
+                            <span>
+                                OD
+                            </span>
+
+                            <strong id="clueOD">
+                                -
+                            </strong>
+
+                        </div>
+
+
+                        <div class="stat-card">
+
+                            <span>
+                                HP
+                            </span>
+
+                            <strong id="clueHP">
+                                -
+                            </strong>
+
+                        </div>
+
+
+                    </div>
+
+                </div>
+
+
+
+                <!-- DIFFICULTY -->
+
+                <div
+                    id="difficultyClue"
+                    class="revealed-clue hidden"
+                >
+
+                    <div class="revealed-clue-title">
+                        DIFFICULTY
+                    </div>
+
+
+                    <div
+                        id="clueDifficultyValue"
+                        class="difficulty-value"
+                    >
+                        -
+                    </div>
+
+                </div>
+
+
+
+                <!-- BACKGROUND -->
+
+                <div
+                    id="backgroundClue"
+                    class="revealed-clue background-clue hidden"
+                >
+
+                    <div class="revealed-clue-title">
+                        MAP BACKGROUND
+                    </div>
+
+
+                    <img
+                        id="clueBackgroundImage"
+                        src=""
+                        alt="Map background"
+                    >
+
+                </div>
+
+
+            </div>
+
+        </section>
+
+
+
+        <!-- =====================================
+             SEARCH
+        ====================================== -->
+
+        <section class="search-area">
+
+
+            <input
+                type="text"
+                id="mapInput"
+                autocomplete="off"
+                placeholder="Search artist, mapper or beatmap..."
+            >
+
+
+            <div
+                id="suggestions"
+                class="suggestions hidden"
+            ></div>
+
+
+            <button
+                id="guessButton"
+                disabled
+            >
+                GUESS
+            </button>
+
+
+        </section>
+
+
+
+        <!-- =====================================
+             MESSAGE
+        ====================================== -->
+
+        <div
+            id="message"
+            class="message"
+        ></div>
+
+
+
+        <!-- =====================================
+             RESULTS TABLE
+        ====================================== -->
+
+        <section class="results-section">
+
+
+            <div class="results-scroll">
+
+
+                <div class="results-table">
+
+
+                    <!-- HEADER -->
+
+                    <div class="results-header">
+
+
+                        <div>
+                            BEATMAP
+                        </div>
+
+
+                        <div>
+                            ARTIST
+                        </div>
+
+
+                        <div>
+                            MAPPER
+                        </div>
+
+
+                        <div>
+                            STARS
+                        </div>
+
+
+                        <div>
+                            BPM
+                        </div>
+
+
+                        <div>
+                            LENGTH
+                        </div>
+
+
+                    </div>
+
+
+                    <!-- ATTEMPTS -->
+
+                    <div id="attempts"></div>
+
+
+                </div>
+
+
+            </div>
+
+
+        </section>
+
+
+
+        <!-- =====================================
+             WIN SCREEN
+        ====================================== -->
+
+        <section
+            id="winScreen"
+            class="win-screen hidden"
+        >
+
+
+            <div class="win-card">
+
+
+                <div class="win-title">
+                    🎉 Correct!
+                </div>
+
+
+                <div class="win-subtitle">
+                    You found today's Catchdle!
+                </div>
+
+
+                <img
+                    id="winCover"
+                    class="win-cover"
+                    src=""
+                    alt="Beatmap cover"
+                >
+
+
+                <h2 id="winMapTitle">
+                    -
+                </h2>
+
+
+                <p id="winArtist">
+                    -
+                </p>
+
+
+                <p id="winMapper">
+                    -
+                </p>
+
+
+                <div class="win-attempts">
+
+                    Solved in
+
+                    <strong id="winAttempts">
+                        -
+                    </strong>
+
+                    attempts.
+
+                </div>
+
+
+
+                <!-- =================================
+                     WIN BUTTONS
+                ================================== -->
+
+                <div class="win-buttons">
+
+
+                    <a
+                        id="winOsuLink"
+                        class="osu-button"
+                        href="#"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                    >
+                        OPEN BEATMAP
+                    </a>
+
+
+                    <button
+                        id="leaderboardButton"
+                        class="leaderboard-button"
+                        type="button"
+                    >
+                        🏆 LEADERBOARD
+                    </button>
+
+
+                </div>
+
+
+
+                <div class="win-countdown">
+
+                    Next Catchdle
+
+                    <strong id="winCountdown">
+                        00:00:00
+                    </strong>
+
+                </div>
+
+
+            </div>
+
+
+        </section>
+
+
+
+        <!-- =====================================
+             LEADERBOARD MODAL
+        ====================================== -->
+
+        <div
+            id="leaderboardModal"
+            class="leaderboard-modal hidden"
+        >
+
+
+            <div class="leaderboard-card">
+
+
+                <!-- HEADER -->
+
+                <div class="leaderboard-header">
+
+
+                    <div class="leaderboard-heading">
+
+
+                        <span class="leaderboard-icon">
+                            🏆
+                        </span>
+
+
+                        <div>
+
+                            <h2>
+                                Catchdle Leaderboard
+                            </h2>
+
+
+                            <p>
+                                Top players
+                            </p>
+
+                        </div>
+
+
+                    </div>
+
+
+                    <button
+                        id="closeLeaderboard"
+                        class="leaderboard-close"
+                        type="button"
+                        aria-label="Close leaderboard"
+                    >
+                        ×
+                    </button>
+
+
+                </div>
+
+
+
+                <!-- =================================
+                     LEADERBOARD TABLE
+                ================================== -->
+
+                <div class="leaderboard-table-wrapper">
+
+
+                    <table class="leaderboard-table">
+
+
+                        <thead>
+
+                            <tr>
+
+
+                                <th>
+                                    #
+                                </th>
+
+
+                                <th>
+                                    PLAYER
+                                </th>
+
+
+                                <th>
+                                    POINTS
+                                </th>
+
+
+                                <th>
+                                    WINS
+                                </th>
+
+
+                                <th>
+                                    GAMES
+                                </th>
+
+
+                                <th>
+                                    WIN RATE
+                                </th>
+
+
+                            </tr>
+
+                        </thead>
+
+
+                        <tbody id="leaderboardBody">
+
+
+                            <tr>
+
+                                <td
+                                    colspan="6"
+                                    class="leaderboard-loading"
+                                >
+                                    Loading leaderboard...
+                                </td>
+
+                            </tr>
+
+
+                        </tbody>
+
+
+                    </table>
+
+
+                </div>
+
+
+
+                <!-- =================================
+                     CLOSE BUTTON
+                ================================== -->
+
+                <button
+                    id="closeLeaderboardBottom"
+                    class="leaderboard-close-button"
+                    type="button"
+                >
+                    CLOSE
+                </button>
+
+
+            </div>
+
+
+        </div>
+
+
+
+        <!-- =====================================
+             NEXT CATCHDLE
+        ====================================== -->
+
+        <section class="next-catchdle">
+        </section>
+
+
+
+
+        <!-- =====================================
+             PLAYER STATISTICS MODAL
+        ====================================== -->
+
+        <div
+            id="statsModal"
+            class="stats-modal hidden"
+        >
+
+            <div class="stats-card">
+
+                <div class="stats-header">
+
+                    <div class="stats-heading">
+
+                        <img
+                            id="statsAvatar"
+                            class="stats-avatar"
+                            src=""
+                            alt="Avatar"
+                        >
+
+                        <div>
+                            <h2>My Statistics</h2>
+                            <p id="statsUsername">Player</p>
+                        </div>
+
+                    </div>
+
+                    <button
+                        id="closeStats"
+                        class="stats-close"
+                        type="button"
+                        aria-label="Close statistics"
+                    >
+                        ×
+                    </button>
+
+                </div>
+
+                <div class="stats-grid-modal">
+
+                    <div class="profile-stat">
+                        <span>POINTS</span>
+                        <strong id="statPoints">0</strong>
+                    </div>
+
+                    <div class="profile-stat">
+                        <span>WINS</span>
+                        <strong id="statWins">0</strong>
+                    </div>
+
+                    <div class="profile-stat">
+                        <span>GAMES</span>
+                        <strong id="statGames">0</strong>
+                    </div>
+
+                    <div class="profile-stat">
+                        <span>WIN RATE</span>
+                        <strong id="statWinRate">0.0%</strong>
+                    </div>
+
+                    <div class="profile-stat">
+                        <span>AVG. ATTEMPTS</span>
+                        <strong id="statAverageAttempts">0.00</strong>
+                    </div>
+
+                    <div class="profile-stat">
+                        <span>LOSSES</span>
+                        <strong id="statLosses">0</strong>
+                    </div>
+
+                    <div class="profile-stat streak-stat">
+                        <span>CURRENT STREAK</span>
+                        <strong id="statCurrentStreak">0</strong>
+                    </div>
+
+                    <div class="profile-stat streak-stat">
+                        <span>BEST STREAK</span>
+                        <strong id="statBestStreak">0</strong>
+                    </div>
+
+                </div>
+
+                <div
+                    id="statsMessage"
+                    class="stats-message"
+                ></div>
+
+                <button
+                    id="closeStatsBottom"
+                    class="stats-close-button"
+                    type="button"
+                >
+                    CLOSE
+                </button>
+
+            </div>
+
+        </div>
+
+
+
+        <!-- =====================================
+             CREDITS MODAL
+        ====================================== -->
+
+        <div
+            id="creditsModal"
+            class="stats-modal credits-modal hidden"
+        >
+            <div class="stats-card credits-card">
+
+                <div class="stats-header">
+                    <div class="stats-heading">
+                        <div class="credits-title-icon">✦</div>
+                        <div>
+                            <h2>Credits</h2>
+                            <p>Catchdle</p>
+                        </div>
+                    </div>
+
+                    <button
+                        id="closeCredits"
+                        class="stats-close"
+                        type="button"
+                        aria-label="Close credits"
+                    >×</button>
+                </div>
+
+                <div class="credits-links">
+
+                    <a
+                        class="credit-link credit-osu"
+                        href="https://osu.ppy.sh/users/18076539"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                    >
+                        <img
+                            src="https://cdn.simpleicons.org/osu/ff66aa"
+                            alt="osu!"
+                        >
+                        <span>
+                            <strong>osu!</strong>
+                            <small>Creator profile</small>
+                        </span>
+                        <span class="credit-arrow">↗</span>
+                    </a>
+
+                    <a
+                        class="credit-link credit-paypal"
+                        href="https://paypal.me/dakaryuwu?country.x=CO&locale.x=es_XC"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                    >
+                        <img
+                            src="https://cdn.simpleicons.org/paypal/ffffff"
+                            alt="PayPal"
+                        >
+                        <span>
+                            <strong>PayPal</strong>
+                            <small>Support Catchdle</small>
+                        </span>
+                        <span class="credit-arrow">↗</span>
+                    </a>
+
+                    <a
+                        class="credit-link credit-github"
+                        href="https://github.com/davidgutierrezg22"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                    >
+                        <img
+                            src="https://cdn.simpleicons.org/github/ffffff"
+                            alt="GitHub"
+                        >
+                        <span>
+                            <strong>GitHub</strong>
+                            <small>Catchdle source code</small>
+                        </span>
+                        <span class="credit-arrow">↗</span>
+                    </a>
+
+                    <a
+                        class="credit-link credit-tiktok"
+                        href="https://www.tiktok.com/@dakaryosuctb"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                    >
+                        <img
+                            src="https://cdn.simpleicons.org/tiktok/ffffff"
+                            alt="TikTok"
+                        >
+                        <span>
+                            <strong>TikTok</strong>
+                            <small>@dakaryosuctb</small>
+                        </span>
+                        <span class="credit-arrow">↗</span>
+                    </a>
+
+                </div>
+
+                <p class="credits-note">Made with ♥ for the osu!catch community.</p>
+
+                <button
+                    id="closeCreditsBottom"
+                    class="stats-close-button"
+                    type="button"
+                >
+                    CLOSE
+                </button>
+
+            </div>
+        </div>
+
+
+        <!-- =====================================
+             FOOTER
+        ====================================== -->
+
+        <footer class="footer">
+
+            Made with
+
+            <span>
+                ♥
+            </span>
+
+            for the osu!catch community
+
+        </footer>
+
+
+    </main>
+
+
+
+    <!-- =========================================
+         JAVASCRIPT
+    ========================================== -->
+
+    <script src="script.js"></script>
+
+
+</body>
+
+</html>

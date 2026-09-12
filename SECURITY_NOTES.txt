@@ -1,0 +1,16 @@
+Catchdle hardened build
+
+- The beatmap dataset is loaded once by the server and is never exposed as a static route.
+- Search results intentionally omit stars/BPM/duration/CS/AR/OD/HP/difficulty before a guess.
+- The daily map is persisted in SQLite by Colombia date, so updating beatmaps.json cannot change an already-assigned daily.
+- /api/guess is server-authoritative and validates the submitted beatmapset ID against the cached dataset.
+- Sessions use random tokens; only SHA-256 hashes are stored in SQLite. Cookies are HttpOnly/SameSite=Lax and Secure is mandatory in production.
+- OAuth state is single-use and expires after 10 minutes.
+- Security headers include CSP, HSTS in production, frame protection, MIME sniffing protection, referrer policy and cross-origin policies.
+- Guess/search/game-read endpoints have per-session rate limits.
+- JSON POST bodies are capped at 16 KiB.
+- SQLite uses WAL, foreign keys, a 10-second busy timeout, and indexes for hot queries.
+- The frontend no longer calculates the daily answer or comparison values. It renders comparisons returned by the server.
+- localStorage is only a UI cache; the server remains the source of truth.
+- Restart the application after replacing beatmaps.json so the in-memory dataset is refreshed. The daily assignment itself remains fixed in catchdle.db.
+- Existing .env and catchdle.db are intentionally not included in releases.

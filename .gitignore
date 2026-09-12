@@ -1,0 +1,10 @@
+.env
+catchdle.db
+catchdle.db-wal
+catchdle.db-shm
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.env.*
+!.env.example
