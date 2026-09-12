@@ -1,62 +1,66 @@
 # 🍓 Catchdle
 
-> Adivina el beatmap de osu!catch del día.
+> Guess the osu!catch beatmap of the day.
 
-Catchdle es un juego diario inspirado en juegos como LoLdle y Pokedle, donde tienes que descubrir el beatmap de osu!catch seleccionado para el día utilizando diferentes pistas.
+Catchdle is a daily guessing game inspired by games like LoLdle and Pokedle, where you have to discover the osu!catch beatmap selected for the day using different clues.
 
-## 🎮 ¿Cómo jugar?
+## 🎮 How to Play
 
-Cada día se selecciona un beatmap de osu!catch.
+Every day, an osu!catch beatmap is selected.
 
-En cada intento recibirás información sobre el mapa, como:
+With each attempt, you will receive information about the map, such as:
 
-- ⭐ Stars
-- 🎵 BPM
-- ⏱️ Duración
-- 🎯 CS
-- 📈 AR
-- 💥 OD
-- ❤️ HP
-- 🗺️ Dificultad
-- 👤 Mapper
+* ⭐ Stars
+* 🎵 BPM
+* ⏱️ Duration
+* 🎯 CS
+* 📈 AR
+* 💥 OD
+* ❤️ HP
+* 🗺️ Difficulty
+* 👤 Mapper
 
-Las pistas cambian de color dependiendo de qué tan cerca estés de la respuesta.
+The clues change color depending on how close you are to the answer.
 
-Tienes un número limitado de intentos para descubrir el beatmap del día.
+You have a limited number of attempts to discover the beatmap of the day.
 
-## ✨ Características
+## ✨ Features
 
-- 🍓 Beatmap diario de osu!catch
-- 🔎 Búsqueda de beatmaps
-- 🎯 Sistema de pistas
-- 🏆 Sistema de puntuación
-- 📊 Estadísticas de jugador
-- 🥇 Leaderboard
-- 🔐 Inicio de sesión con osu!
-- 🎨 Fondos dinámicos
-- 📱 Diseño responsive
-- 🛡️ Validaciones y protección del servidor
+* 🍓 Daily osu!catch beatmap
+* 🔎 Beatmap search
+* 🎯 Clue system
+* 🏆 Scoring system
+* 📊 Player statistics
+* 🥇 Leaderboard
+* 🔐 osu! login
+* 🎨 Dynamic backgrounds
+* 📱 Responsive design
+* 🛡️ Server-side validation and protection
 
-## 🛠️ Tecnologías
+## 🛠️ Technologies
 
 ### Frontend
-- HTML
-- CSS
-- JavaScript
+
+* HTML
+* CSS
+* JavaScript
 
 ### Backend
-- Python
-- FastAPI
-- SQLite
+
+* Python
+* FastAPI
+* SQLite
 
 ### APIs
-- osu! API v2
-- osu! OAuth
 
-## 🚀 Instalación
+* osu! API v2
+* osu! OAuth
 
-Clona el repositorio:
+## 🚀 Installation
+
+Clone the repository:
 
 ```bash
 git clone https://github.com/davidgutierrezg22/Catchdle.git
 cd Catchdle
+```
