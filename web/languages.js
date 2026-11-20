@@ -2,6 +2,16 @@ const languages = { en: "English", es: "Español", pt: "Português", fr: "Franç
 
 // English source, followed by Spanish, Portuguese, French and Japanese.
 const copy = [
+    ["Audio controls","Controles de audio","Controles de áudio","Commandes audio","音声コントロール"],
+    ["Go to start","Volver al inicio","Voltar ao início","Revenir au début","先頭へ"],
+    ["Go to end","Ir al final","Ir ao final","Aller à la fin","末尾へ"],
+    ["Play","Reproducir","Reproduzir","Lire","再生"],
+    ["Pause","Pausar","Pausar","Pause","一時停止"],
+    ["Playback position","Posición de reproducción","Posição de reprodução","Position de lecture","再生位置"],
+    ["Volume","Volumen","Volume","Volume","音量"],
+    ["Mute","Silenciar","Silenciar","Couper le son","ミュート"],
+    ["Unmute","Activar sonido","Ativar som","Rétablir le son","ミュート解除"],
+    ["Repeat clip","Repetir fragmento","Repetir trecho","Répéter l’extrait","リピート"],
     ["Language","Idioma","Idioma","Langue","言語"],
     ["Guess the daily osu!catch beatmapset.","Adivina el set de osu!catch del día.","Adivinhe o set de osu!catch do dia.","Devine le set osu!catch du jour.","今日の osu!catch のセットを当てよう。"],
     ["Log in with osu!","Entrar con osu!","Entrar com osu!","Se connecter avec osu!","osu! でログイン"],

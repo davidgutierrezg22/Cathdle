@@ -13,6 +13,36 @@ Create **New → Web Service**, connect the GitHub repository, and use:
 
 Catchdle uses SQLite. Because Render's normal filesystem is ephemeral, attach a **persistent disk** to the web service (paid web service) at `/var/data`. The app is configured to use `CATCHDLE_DB_PATH=/var/data/catchdle.db`. Render documents that persistent disks preserve filesystem changes across deploys/restarts; without one, SQLite data would be lost.
 
+### Moving an existing service without losing scores
+
+Keep the running service on its current deploy while you copy its database. Adding a disk
+or changing environment variables can restart the service. Pause gameplay during the
+final copy so that no later guesses are left behind.
+
+From the current service shell, create a consistent backup including committed WAL data:
+
+```sh
+python - <<'PY'
+import os, sqlite3, tempfile
+from pathlib import Path
+from contextlib import closing
+source = Path(os.environ.get("CATCHDLE_DB_PATH", "catchdle.db")).resolve()
+with tempfile.NamedTemporaryFile(prefix="catchdle-backup-", suffix=".db", delete=False) as f:
+    backup = Path(f.name)
+with closing(sqlite3.connect(source.as_uri() + "?mode=ro", uri=True)) as src, closing(sqlite3.connect(backup)) as dst:
+    src.backup(dst)
+    assert dst.execute("PRAGMA integrity_check").fetchone()[0] == "ok"
+print(backup)
+PY
+```
+
+Transfer that backup to private storage **outside the service** before attaching the disk.
+It includes sessions and player records. Keep it out of GitHub. Use a disk-mounted
+service with gameplay paused when restoring, and restore into a fresh destination
+before the app accepts writes. Do not overwrite an active database. Check player and
+result counts for Classic, Background and Audio against the backup, then verify them
+again after a restart. Keep the original backup until the checks pass.
+
 ## 3. Environment variables
 Set these in Render:
 

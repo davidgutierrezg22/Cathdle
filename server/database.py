@@ -4,8 +4,32 @@ from pathlib import Path
 
 
 BASE_DIR = Path(__file__).resolve().parent.parent
-DB_PATH = Path(os.getenv("CATCHDLE_DB_PATH", str(BASE_DIR / "catchdle.db"))).expanduser()
-DB_PATH.parent.mkdir(parents=True, exist_ok=True)
+
+
+def database_path():
+    local = BASE_DIR / "catchdle.db"
+    configured = os.getenv("CATCHDLE_DB_PATH")
+    on_render = os.getenv("RENDER", "").lower() == "true"
+    path = Path(configured or ("/var/data/catchdle.db" if on_render else local)).expanduser().resolve()
+
+    if on_render:
+        # Render mounts a persistent disk on a directory below the service filesystem.
+        # mountinfo also lists bind mounts, which ismount() can miss on Linux.
+        mounts = set()
+        for line in Path("/proc/self/mountinfo").read_text().splitlines():
+            fields, fs = line.split(" - ", 1)
+            mount = Path(fields.split()[4].replace(r"\040", " "))
+            if mount not in BASE_DIR.parents and mount != BASE_DIR and fs.split()[0] not in {"tmpfs", "overlay", "ramfs"}:
+                mounts.add(mount)
+        if not mounts.intersection(path.parents):
+            raise RuntimeError(f"SQLite path {path} needs to be on the Render persistent disk.")
+        if local.is_file() and path != local and not path.exists():
+            raise RuntimeError("Back up and restore the existing catchdle.db to the disk before starting.")
+    path.parent.mkdir(parents=True, exist_ok=True)
+    return path
+
+
+DB_PATH = database_path()
 
 
 def get_connection():

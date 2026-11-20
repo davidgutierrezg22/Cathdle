@@ -7,7 +7,7 @@
 
     <title>Catchdle</title>
 
-    <link rel="stylesheet" href="style.css?v=languages-1">
+    <link rel="stylesheet" href="style.css?v=player-1">
 </head>
 
 <body class="at-login">
@@ -160,6 +160,16 @@
         <section id="audioPuzzle" aria-label="Mystery song" hidden>
             <p id="clipLength" aria-live="polite">Loading today’s clip…</p>
             <audio id="songPlayer" controls preload="auto" aria-label="Play the mystery song"></audio>
+            <div id="clipControls" role="group" aria-label="Audio controls" hidden>
+                <button id="clipStart" type="button" title="Go to start" aria-label="Go to start"><span aria-hidden="true"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 3h2v14H4zm12 0v14L7 10z"/></svg></span></button>
+                <button id="clipPlay" type="button" title="Play" aria-label="Play"><span aria-hidden="true">▶</span></button>
+                <button id="clipEnd" type="button" title="Go to end" aria-label="Go to end"><span aria-hidden="true"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M14 3h2v14h-2zM4 3l9 7-9 7z"/></svg></span></button>
+                <input id="clipSeek" type="range" min="0" max="1" step=".01" value="0" aria-label="Playback position">
+                <span id="clipClock">0:00</span>
+                <button id="clipMute" type="button" title="Mute" aria-label="Mute"><span aria-hidden="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 9h4l6-5v16l-6-5H2z"/><g fill="none" stroke="currentColor" stroke-width="2"><path class="sound-wave" d="M15 8q4 4 0 8m3-11q7 7 0 14"/><path class="sound-off" d="m15 9 6 6m0-6-6 6"/></g></svg></span></button>
+                <input id="clipVolume" type="range" min="0" max="1" step=".01" value="1" aria-label="Volume">
+                <button id="clipLoop" type="button" title="Repeat clip" aria-label="Repeat clip" aria-pressed="false"><span aria-hidden="true">↻</span></button>
+            </div>
             <button id="retryAudio" type="button" hidden>Retry audio</button>
             <p>Each miss adds more music. Any set with the same artist and title counts.</p>
         </section>
@@ -1041,8 +1051,9 @@
          JAVASCRIPT
     ========================================== -->
 
-    <script src="languages.js?v=1"></script>
-    <script src="script.js?v=languages-1"></script>
+    <script src="languages.js?v=player-1"></script>
+    <script src="player.js?v=1"></script>
+    <script src="script.js?v=player-1"></script>
 
 
 </body>

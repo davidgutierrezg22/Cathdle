@@ -3274,3 +3274,28 @@ body:not(.at-login) > .login-screen {
     .edition-date { font-size:.73rem; }
     .language-select { max-width:7rem; }
 }
+
+#audioPuzzle audio[hidden], #clipControls[hidden] { display:none; }
+#clipControls {
+    display:flex; align-items:center; gap:4px; margin:12px 0; padding:4px 6px;
+    color:#f4f7f9; background:#414b51; border-radius:3px; color-scheme:dark;
+}
+#clipControls button {
+    flex:none; width:30px; height:32px; padding:0; border:0; background:transparent;
+    color:inherit; font:700 18px/1 Arial,sans-serif; cursor:pointer;
+}
+#clipControls button:disabled { opacity:.4; cursor:default; }
+#clipControls button:hover:not(:disabled), #clipControls button[aria-pressed="true"] { color:#80d5ff; }
+#clipControls :focus-visible { outline:2px solid #9addff; outline-offset:1px; }
+#clipControls input[type="range"] { appearance:none; height:24px; margin:0; min-width:0; background:transparent; cursor:pointer; }
+#clipControls input::-webkit-slider-runnable-track { height:4px; border-radius:2px; background:linear-gradient(to right,#80d5ff var(--fill),#1a2024 var(--fill)); }
+#clipControls input::-moz-range-track { height:4px; background:#1a2024; }
+#clipControls input::-moz-range-progress { height:4px; background:#80d5ff; }
+#clipControls input::-webkit-slider-thumb { appearance:none; width:9px; height:9px; margin-top:-2.5px; border-radius:50%; background:#ddf2ff; }
+#clipSeek { flex:1; }
+#clipVolume { width:12%; max-width:58px; }
+#clipClock { font:11px/1.1 monospace; white-space:nowrap; }
+@media(max-width:420px) { #clipControls { gap:2px; padding-inline:3px; } #clipControls button { width:24px; } #clipClock { font-size:10px; } }
+#clipControls svg { display:block; width:20px; height:20px; margin:auto; fill:currentColor; }
+#clipMute .sound-off, #clipMute.silent .sound-wave { display:none; }
+#clipMute.silent .sound-off { display:inline; }

@@ -1631,6 +1631,7 @@ async function init() {
             document.getElementById("audioPuzzle").hidden = false;
             document.getElementById("attemptLimit").textContent = MAX_ATTEMPTS;
             const player = document.getElementById("songPlayer");
+            setupClipControls(player);
             const retry = document.getElementById("retryAudio");
             player.onerror = () => { retry.hidden = false; };
             player.onloadeddata = () => { retry.hidden = true; };
