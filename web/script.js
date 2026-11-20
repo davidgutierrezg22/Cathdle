@@ -1,6 +1,7 @@
-const GAME_URL = "/api/game";
+const backgroundMode = new URLSearchParams(location.search).get("mode") === "background";
+const GAME_URL = backgroundMode ? "/api/background/game" : "/api/game";
 const SEARCH_URL = "/api/search";
-const STORAGE_KEY = "catchdle_daily_game";
+const STORAGE_KEY = backgroundMode ? "catchdle_background_game" : "catchdle_daily_game";
 const MAX_ATTEMPTS = 10;
 
 const CLUE_STATS_ATTEMPT = 4;
@@ -228,6 +229,12 @@ function renderAttempt(attempt) {
     mapCell.append(image, mapInfo);
     row.appendChild(mapCell);
 
+    if (backgroundMode) {
+        const matched = map.beatmapset_id === secretMap?.beatmapset_id;
+        row.appendChild(createCell(matched ? "Correct" : "Incorrect", matched ? "correct" : "wrong"));
+        attemptsContainer.prepend(row);
+        return;
+    }
     row.appendChild(createCell(map.artist || "-", comparison.artist || "wrong"));
     row.appendChild(createCell(map.mapper || "-", comparison.mapper || "wrong"));
     row.appendChild(createCell(Number(map.stars || 0).toFixed(2), comparison.stars?.status || "wrong", comparison.stars?.arrow || ""));
@@ -422,14 +429,19 @@ async function makeGuess() {
     guessButton.disabled = true;
     mapInput.disabled = true;
     try {
-        const response = await fetch("/api/guess", {
+        const response = await fetch(backgroundMode ? "/api/background/guess" : "/api/guess", {
             method: "POST",
             credentials: "include",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ beatmapset_id: guessedMap.beatmapset_id })
+            body: JSON.stringify({ beatmapset_id: guessedMap.beatmapset_id, date: gameState.date })
         });
         const data = await response.json();
-        if (!response.ok || !data.success) throw new Error(data.error || "Could not process guess.");
+        if (!response.ok || !data.success) throw new Error(data.error || data.detail || "Could not process guess.");
+        if (backgroundMode) {
+            applyGameState(data);
+            if (!data.finished) showMessage("Incorrect guess.", "normal");
+            return;
+        }
         if (data.attempt) gameState.attempts.push(data.attempt);
         gameState.clues = data.clues || gameState.clues;
         gameState.won = Boolean(data.won);
@@ -447,11 +459,11 @@ async function makeGuess() {
         showMessage(error.message || "Could not process guess.", "error");
     } finally {
         selectedMap = null;
-        mapInput.disabled = false;
+        mapInput.disabled = gameState.won || gameState.attempts.length >= MAX_ATTEMPTS;
         mapInput.value = "";
         suggestions?.replaceChildren();
         suggestions?.classList.add("hidden");
-        guessButton.disabled = false;
+        guessButton.disabled = true;
     }
 }
 
@@ -1625,8 +1637,17 @@ async function refreshGameState() {
     const response = await fetch(GAME_URL, { credentials: "include", cache: "no-store" });
     const data = await response.json();
     if (!response.ok || !data.success) throw new Error(data.error || `HTTP ${response.status}`);
+    applyGameState(data);
+    return data;
+}
+
+function applyGameState(data) {
     gameState = createGameState(data);
     secretMap = data.answer || null;
+    if (backgroundMode && data.image) {
+        const image = document.getElementById("bgCrop");
+        if (image.getAttribute("src") !== data.image) image.src = data.image;
+    }
     applyServerClues(data.clue_data || {}, gameState.clues);
     renderHistory();
     updateAttemptCounter();
@@ -1653,6 +1674,17 @@ async function loadLoginCovers() {
 
 async function init() {
     try {
+        document.getElementById(backgroundMode ? "backgroundMode" : "classicMode").setAttribute("aria-current", "page");
+        if (backgroundMode) {
+            document.body.classList.add("background-mode");
+            document.querySelector(".hero .subtitle").textContent = "Which beatmapset is this background from?";
+            document.getElementById("bgPuzzle").hidden = false;
+            const image = document.getElementById("bgCrop");
+            const retry = document.getElementById("retryCrop");
+            image.onerror = () => { retry.hidden = false; };
+            image.onload = () => { retry.hidden = true; };
+            retry.onclick = () => { image.src = image.src; };
+        }
         await loadCurrentUser();
         if (!currentUser) {
             await loadLoginCovers();

@@ -16,6 +16,9 @@ from fastapi import FastAPI, Request
 from fastapi.responses import RedirectResponse, JSONResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 
+from contextlib import closing
+from fastapi import HTTPException, Response
+from server.background_image import render_background
 from server.database import init_database, get_connection
 
 
@@ -169,8 +172,10 @@ def _load_beatmaps():
         # Keep today's removed maps available for search, guesses and restored history.
         referenced_ids = conn.execute(
             """SELECT beatmapset_id FROM daily_maps WHERE date = ?
-               UNION SELECT beatmapset_id FROM daily_guesses WHERE date = ?""",
-            (today, today),
+               UNION SELECT beatmapset_id FROM daily_guesses WHERE date = ?
+               UNION SELECT beatmapset_id FROM background_maps WHERE date = ?
+               UNION SELECT beatmapset_id FROM background_guesses WHERE date = ?""",
+            (today, today, today, today),
         )
         for row in referenced_ids:
             map_id = row["beatmapset_id"]
@@ -1352,12 +1357,116 @@ async def search_maps_api(request: Request):
     return {"success": True, "results": results}
 
 
+def background_answer(conn, day):
+    row = conn.execute("SELECT beatmapset_id FROM background_maps WHERE date = ?", (day,)).fetchone()
+    if row:
+        return row[0]
+    classic = get_daily_map(day)["beatmapset_id"]
+    choices = [map_id for map_id in ELIGIBLE_IDS if map_id != classic] or [classic]
+    seed = hashlib.sha256(f"background:{day}".encode()).digest()
+    map_id = choices[int.from_bytes(seed, "big") % len(choices)]
+    with conn:
+        conn.execute("INSERT OR IGNORE INTO background_maps VALUES (?, ?)", (day, map_id))
+        archive_map(conn, BEATMAPS_BY_ID[map_id])
+    return conn.execute("SELECT beatmapset_id FROM background_maps WHERE date = ?", (day,)).fetchone()[0]
+
+
+def background_player(request, action, limit):
+    session = _get_authenticated_session(request)
+    if not session:
+        raise HTTPException(401, "Log in to play.")
+    if not check_rate_limit(request.cookies.get("catchdle_session"), action, limit):
+        raise HTTPException(429, "Please wait a moment and try again.")
+    return session["user_id"]
+
+
+def background_history(conn, user_id, day):
+    rows = conn.execute(
+        "SELECT beatmapset_id FROM background_guesses WHERE user_id = ? AND date = ? ORDER BY position",
+        (user_id, day),
+    )
+    return [row[0] for row in rows]
+
+
+def background_state(day, answer, guesses):
+    won = answer in guesses
+    finished = won or len(guesses) >= MAX_ATTEMPTS
+    state = {
+        "success": True, "date": day, "won": won, "finished": finished,
+        "attempts": [{"map": search_map(BEATMAPS_BY_ID[n])} for n in guesses],
+        "image": f"/api/background/image?day={day}&step={len(guesses)}",
+    }
+    if finished:
+        state["answer"] = public_map(BEATMAPS_BY_ID[answer])
+    return state
+
+
+@app.get("/api/background/game")
+def background_game(request: Request):
+    user = background_player(request, "bg-game", RATE_LIMIT_MAX_GAME_READS)
+    day = today_colombia()
+    with closing(get_connection()) as conn:
+        answer = background_answer(conn, day)
+        state = background_state(day, answer, background_history(conn, user, day))
+    state["backgrounds"] = decorative_backgrounds(day)
+    return state
+
+
+@app.get("/api/background/image")
+def background_image(request: Request):
+    user = background_player(request, "bg-image", 60)
+    day = today_colombia()
+    with closing(get_connection()) as conn:
+        answer = background_answer(conn, day)
+        guesses = background_history(conn, user, day)
+    step = MAX_ATTEMPTS if answer in guesses else len(guesses)
+    try:
+        data = render_background(answer, step)
+    except (httpx.HTTPError, OSError, ValueError):
+        raise HTTPException(503, "Background image unavailable. Please try again.")
+    return Response(data, media_type="image/jpeg", headers={"Cache-Control": "private, no-store"})
+
+
+@app.post("/api/background/guess")
+async def background_guess(request: Request):
+    if not validate_same_origin(request):
+        raise HTTPException(403, "Invalid request origin.")
+    user = background_player(request, "bg-guess", RATE_LIMIT_MAX_GUESSES)
+    try:
+        body = await request.json()
+    except ValueError:
+        raise HTTPException(400, "Invalid guess.")
+    guess = body.get("beatmapset_id") if isinstance(body, dict) else None
+    if type(guess) is not int or guess not in BEATMAPS_BY_ID:
+        raise HTTPException(400, "Choose a beatmapset.")
+    day = today_colombia()
+    if body.get("date") != day:
+        raise HTTPException(409, "A new daily background is ready. Refresh to play.")
+    with closing(get_connection()) as conn:
+        answer = background_answer(conn, day)
+        with conn:
+            conn.execute("BEGIN IMMEDIATE")
+            guesses = background_history(conn, user, day)
+            if answer not in guesses and len(guesses) < MAX_ATTEMPTS:
+                if guess in guesses:
+                    raise HTTPException(409, "You already guessed this beatmap.")
+                archive_map(conn, BEATMAPS_BY_ID[guess])
+                conn.execute("INSERT INTO background_guesses VALUES (?, ?, ?, ?)", (user, day, len(guesses)+1, guess))
+                guesses.append(guess)
+        return background_state(day, answer, guesses)
+
+
+def decorative_backgrounds(day):
+    classic = get_daily_map(day)["beatmapset_id"]
+    with closing(get_connection()) as conn:
+        excluded = {classic, background_answer(conn, day)}
+    candidates = [url for item, url in zip(BEATMAPS, BACKGROUND_COVERS) if item["beatmapset_id"] not in excluded]
+    return random.sample(candidates, min(30, len(candidates)))
+
+
 @app.get("/api/backgrounds")
 async def get_backgrounds():
-    daily = get_daily_map()
-    daily_id = int(daily["beatmapset_id"]) if daily else -1
-    candidates = [url for item, url in zip(BEATMAPS, BACKGROUND_COVERS) if int(item["beatmapset_id"]) != daily_id]
-    return {"success": True, "backgrounds": random.sample(candidates, min(30, len(candidates)))}
+    return {"success": True, "backgrounds": decorative_backgrounds(today_colombia())}
 
 
 @app.get("/api/game")
@@ -1425,8 +1534,7 @@ async def get_game_state(request: Request):
     if finished:
         payload["answer"] = public_map(daily)
 
-    candidates = [url for item, url in zip(BEATMAPS, BACKGROUND_COVERS) if int(item["beatmapset_id"]) != int(daily["beatmapset_id"])]
-    payload["backgrounds"] = random.sample(candidates, min(30, len(candidates)))
+    payload["backgrounds"] = decorative_backgrounds(today)
     return payload
 
 

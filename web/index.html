@@ -132,6 +132,10 @@
             </div>
 
 
+            <nav class="game-modes" aria-label="Daily game mode">
+                <a href="?mode=classic" id="classicMode">Classic</a>
+                <a href="?mode=background" id="backgroundMode">Background</a>
+            </nav>
             <p class="subtitle">
                 Guess the daily osu!catch beatmapset
             </p>
@@ -144,6 +148,13 @@
              SEARCH
         ====================================== -->
 
+        <section id="bgPuzzle" aria-label="Mystery background" hidden>
+            <div class="bg-frame">
+                <img id="bgCrop" alt="Zoomed view of today's mystery beatmap background">
+                <button id="retryCrop" type="button" hidden>Retry image</button>
+            </div>
+            <p>Each wrong guess zooms out. You have 10 attempts.</p>
+        </section>
         <section class="search-area">
 
 
@@ -719,7 +730,7 @@
                         <div>
 
                             <h2>
-                                Catchdle Leaderboard
+                                Classic Leaderboard
                             </h2>
 
 
@@ -875,7 +886,7 @@
                         >
 
                         <div>
-                            <h2>My Statistics</h2>
+                            <h2>My Classic Statistics</h2>
                             <p id="statsUsername">Player</p>
                         </div>
 
