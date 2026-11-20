@@ -682,10 +682,10 @@ async function makeGuess() {
    BACKGROUND COLLAGE
    ========================================================= */
 
-function createBackgroundCollage(backgrounds = []) {
-    if (!backgroundCollage) return;
-    backgroundCollage.replaceChildren();
-    (Array.isArray(backgrounds) ? backgrounds : []).slice(0, 30).forEach((url, index) => {
+function createBackgroundCollage(backgrounds = [], container = backgroundCollage, limit = 30) {
+    if (!container) return;
+    container.replaceChildren();
+    (Array.isArray(backgrounds) ? backgrounds : []).slice(0, limit).forEach((url, index) => {
         if (typeof url !== "string" || !/^https:\/\/(assets\.ppy\.sh|osu\.ppy\.sh)\//.test(url)) return;
         const tile = document.createElement("div");
         tile.className = "background-tile";
@@ -698,7 +698,7 @@ function createBackgroundCollage(backgrounds = []) {
         image.referrerPolicy = "no-referrer";
         image.onerror = function () { this.style.display = "none"; };
         tile.appendChild(image);
-        backgroundCollage.appendChild(tile);
+        container.appendChild(tile);
     });
 }
 
@@ -1902,10 +1902,25 @@ async function refreshGameState() {
     return data;
 }
 
+async function loadLoginCovers() {
+    try {
+        const response = await fetch("/api/backgrounds", { cache: "no-store" });
+        if (response.ok) {
+            const data = await response.json();
+            createBackgroundCollage(data.backgrounds, document.getElementById("loginCovers"), 12);
+        }
+    } catch (error) {
+        console.warn("Could not load login covers", error);
+    }
+}
+
 async function init() {
     try {
         await loadCurrentUser();
-        if (!currentUser) return;
+        if (!currentUser) {
+            await loadLoginCovers();
+            return;
+        }
         setupProfileButton();
         await refreshGameState();
         console.log("Catchdle initialized securely.");
