@@ -135,6 +135,7 @@
             <nav class="game-modes" aria-label="Daily game mode">
                 <a href="?mode=classic" id="classicMode">Classic</a>
                 <a href="?mode=background" id="backgroundMode">Background</a>
+                <a href="?mode=audio" id="audioMode">Audio</a>
             </nav>
             <p class="subtitle">
                 Guess the daily osu!catch beatmapset
@@ -155,6 +156,13 @@
             </div>
             <p>Each wrong guess zooms out. You have 10 attempts.</p>
         </section>
+        <section id="audioPuzzle" aria-label="Mystery song" hidden>
+            <p id="clipLength" aria-live="polite">Loading today’s clip…</p>
+            <audio id="songPlayer" controls preload="auto" aria-label="Play the mystery song"></audio>
+            <button id="retryAudio" type="button" hidden>Retry audio</button>
+            <p>Each miss adds more music. Any set with the same artist and title counts.</p>
+        </section>
+
         <section class="search-area">
 
 
@@ -195,7 +203,7 @@
                 0
             </span>
 
-            / 10 ATTEMPTS
+            / <span id="attemptLimit">10</span> ATTEMPTS
 
         </div>
 

@@ -1,8 +1,12 @@
-const backgroundMode = new URLSearchParams(location.search).get("mode") === "background";
-const GAME_URL = backgroundMode ? "/api/background/game" : "/api/game";
+const requestedMode = new URLSearchParams(location.search).get("mode");
+const backgroundMode = requestedMode === "background";
+const audioMode = requestedMode === "audio";
+const mediaMode = audioMode || backgroundMode;
+const modePath = mediaMode ? "/api/" + requestedMode : "/api";
+const GAME_URL = modePath + "/game";
 const SEARCH_URL = "/api/search";
-const STORAGE_KEY = backgroundMode ? "catchdle_background_game" : "catchdle_daily_game";
-const MAX_ATTEMPTS = 10;
+const STORAGE_KEY = mediaMode ? "catchdle_" + requestedMode + "_game" : "catchdle_daily_game";
+const MAX_ATTEMPTS = audioMode ? 6 : 10;
 
 const CLUE_STATS_ATTEMPT = 4;
 const CLUE_DIFFICULTY_ATTEMPT = 7;
@@ -229,8 +233,8 @@ function renderAttempt(attempt) {
     mapCell.append(image, mapInfo);
     row.appendChild(mapCell);
 
-    if (backgroundMode) {
-        const matched = map.beatmapset_id === secretMap?.beatmapset_id;
+    if (mediaMode) {
+        const matched = audioMode ? attempt.correct : map.beatmapset_id === secretMap?.beatmapset_id;
         row.appendChild(createCell(matched ? "Correct" : "Incorrect", matched ? "correct" : "wrong"));
         attemptsContainer.prepend(row);
         return;
@@ -429,7 +433,7 @@ async function makeGuess() {
     guessButton.disabled = true;
     mapInput.disabled = true;
     try {
-        const response = await fetch(backgroundMode ? "/api/background/guess" : "/api/guess", {
+        const response = await fetch(modePath + "/guess", {
             method: "POST",
             credentials: "include",
             headers: { "Content-Type": "application/json" },
@@ -437,7 +441,7 @@ async function makeGuess() {
         });
         const data = await response.json();
         if (!response.ok || !data.success) throw new Error(data.error || data.detail || "Could not process guess.");
-        if (backgroundMode) {
+        if (mediaMode) {
             applyGameState(data);
             if (!data.finished) showMessage("Incorrect guess.", "normal");
             return;
@@ -1636,7 +1640,7 @@ document.addEventListener(
 async function refreshGameState() {
     const response = await fetch(GAME_URL, { credentials: "include", cache: "no-store" });
     const data = await response.json();
-    if (!response.ok || !data.success) throw new Error(data.error || `HTTP ${response.status}`);
+    if (!response.ok || !data.success) throw new Error(data.error || data.detail || `HTTP ${response.status}`);
     applyGameState(data);
     return data;
 }
@@ -1644,6 +1648,11 @@ async function refreshGameState() {
 function applyGameState(data) {
     gameState = createGameState(data);
     secretMap = data.answer || null;
+    if (audioMode && data.audio) {
+        const player = document.getElementById("songPlayer");
+        document.getElementById("clipLength").textContent = data.seconds + (data.seconds === 1 ? " second" : " seconds");
+        if (player.getAttribute("src") !== data.audio) player.src = data.audio;
+    }
     if (backgroundMode && data.image) {
         const image = document.getElementById("bgCrop");
         if (image.getAttribute("src") !== data.image) image.src = data.image;
@@ -1674,9 +1683,19 @@ async function loadLoginCovers() {
 
 async function init() {
     try {
-        document.getElementById(backgroundMode ? "backgroundMode" : "classicMode").setAttribute("aria-current", "page");
+        document.getElementById(mediaMode ? requestedMode + "Mode" : "classicMode").setAttribute("aria-current", "page");
+        if (mediaMode) document.body.classList.add("media-mode");
+        if (audioMode) {
+            document.querySelector(".hero .subtitle").textContent = "Which song is playing?";
+            document.getElementById("audioPuzzle").hidden = false;
+            document.getElementById("attemptLimit").textContent = MAX_ATTEMPTS;
+            const player = document.getElementById("songPlayer");
+            const retry = document.getElementById("retryAudio");
+            player.onerror = () => { retry.hidden = false; };
+            player.onloadeddata = () => { retry.hidden = true; };
+            retry.onclick = () => { if (player.getAttribute("src")) player.load(); else refreshGameState().catch(error => showMessage(error.message, "error")); };
+        }
         if (backgroundMode) {
-            document.body.classList.add("background-mode");
             document.querySelector(".hero .subtitle").textContent = "Which beatmapset is this background from?";
             document.getElementById("bgPuzzle").hidden = false;
             const image = document.getElementById("bgCrop");
@@ -1694,6 +1713,7 @@ async function init() {
         await refreshGameState();
         console.log("Catchdle initialized securely.");
     } catch (error) {
+        if (audioMode && currentUser) document.getElementById("retryAudio").hidden = false;
         console.error("Error initializing Catchdle:", error);
         if (document.body.classList.contains("at-login")) {
             document.querySelector(".login-note").textContent = "Couldn’t check your session. Refresh to try again.";

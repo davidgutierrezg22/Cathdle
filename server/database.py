@@ -54,6 +54,24 @@ def init_database():
     """)
 
     conn.execute("""
+        CREATE TABLE IF NOT EXISTS audio_maps (
+            date TEXT PRIMARY KEY,
+            beatmapset_id INTEGER NOT NULL,
+            pcm BLOB
+        )
+    """)
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS audio_guesses (
+            user_id INTEGER NOT NULL REFERENCES users(id),
+            date TEXT NOT NULL REFERENCES audio_maps(date),
+            position INTEGER NOT NULL,
+            beatmapset_id INTEGER NOT NULL,
+            PRIMARY KEY (user_id, date, position),
+            UNIQUE (user_id, date, beatmapset_id)
+        )
+    """)
+
+    conn.execute("""
         CREATE TABLE IF NOT EXISTS oauth_states (
             state TEXT PRIMARY KEY,
             created_at REAL NOT NULL

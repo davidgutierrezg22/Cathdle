@@ -18,6 +18,9 @@ from fastapi.staticfiles import StaticFiles
 
 from contextlib import closing
 from fastapi import HTTPException, Response
+from server.audio_clip import STAGES, fetch_preview, wav_clip
+from threading import Lock
+from starlette.concurrency import run_in_threadpool
 from server.background_image import render_background
 from server.database import init_database, get_connection
 
@@ -174,8 +177,10 @@ def _load_beatmaps():
             """SELECT beatmapset_id FROM daily_maps WHERE date = ?
                UNION SELECT beatmapset_id FROM daily_guesses WHERE date = ?
                UNION SELECT beatmapset_id FROM background_maps WHERE date = ?
-               UNION SELECT beatmapset_id FROM background_guesses WHERE date = ?""",
-            (today, today, today, today),
+               UNION SELECT beatmapset_id FROM background_guesses WHERE date = ?
+               UNION SELECT beatmapset_id FROM audio_maps WHERE date = ?
+               UNION SELECT beatmapset_id FROM audio_guesses WHERE date = ?""",
+            (today,) * 6,
         )
         for row in referenced_ids:
             map_id = row["beatmapset_id"]
@@ -1371,7 +1376,7 @@ def background_answer(conn, day):
     return conn.execute("SELECT beatmapset_id FROM background_maps WHERE date = ?", (day,)).fetchone()[0]
 
 
-def background_player(request, action, limit):
+def media_player(request, action, limit):
     session = _get_authenticated_session(request)
     if not session:
         raise HTTPException(401, "Log in to play.")
@@ -1403,7 +1408,7 @@ def background_state(day, answer, guesses):
 
 @app.get("/api/background/game")
 def background_game(request: Request):
-    user = background_player(request, "bg-game", RATE_LIMIT_MAX_GAME_READS)
+    user = media_player(request, "bg-game", RATE_LIMIT_MAX_GAME_READS)
     day = today_colombia()
     with closing(get_connection()) as conn:
         answer = background_answer(conn, day)
@@ -1414,7 +1419,7 @@ def background_game(request: Request):
 
 @app.get("/api/background/image")
 def background_image(request: Request):
-    user = background_player(request, "bg-image", 60)
+    user = media_player(request, "bg-image", 60)
     day = today_colombia()
     with closing(get_connection()) as conn:
         answer = background_answer(conn, day)
@@ -1431,7 +1436,7 @@ def background_image(request: Request):
 async def background_guess(request: Request):
     if not validate_same_origin(request):
         raise HTTPException(403, "Invalid request origin.")
-    user = background_player(request, "bg-guess", RATE_LIMIT_MAX_GUESSES)
+    user = media_player(request, "bg-guess", RATE_LIMIT_MAX_GUESSES)
     try:
         body = await request.json()
     except ValueError:
@@ -1456,10 +1461,123 @@ async def background_guess(request: Request):
         return background_state(day, answer, guesses)
 
 
+audio_selection_lock = Lock()
+
+
+def daily_song(conn, day):
+    with audio_selection_lock:
+        row = conn.execute("SELECT beatmapset_id FROM audio_maps WHERE date = ?", (day,)).fetchone()
+        if row:
+            return row[0]
+        excluded = {get_daily_map(day)["beatmapset_id"], background_answer(conn, day)}
+        candidates = [n for n in ELIGIBLE_IDS if n not in excluded] or ELIGIBLE_IDS
+        for candidate in random.Random("audio:" + day).sample(candidates, min(12, len(candidates))):
+            try:
+                pcm = fetch_preview(candidate)
+            except (httpx.HTTPError, OSError, TimeoutError) as error:
+                raise HTTPException(503, "Audio previews are temporarily unavailable. Please retry.") from error
+            if pcm is None:
+                continue
+            with conn:
+                conn.execute("INSERT OR IGNORE INTO audio_maps VALUES (?, ?, ?)", (day, candidate, pcm))
+                archive_map(conn, BEATMAPS_BY_ID[candidate])
+                conn.execute("UPDATE audio_maps SET pcm = NULL WHERE date < ? AND pcm IS NOT NULL", (day,))
+            return conn.execute("SELECT beatmapset_id FROM audio_maps WHERE date = ?", (day,)).fetchone()[0]
+    raise HTTPException(503, "No playable preview found for today.")
+
+
+def song_key(map_id):
+    item = BEATMAPS_BY_ID[map_id]
+    return tuple(" ".join(item[field].casefold().split()) for field in ("artist", "title"))
+
+
+def song_history(conn, user, day):
+    return [row[0] for row in conn.execute(
+        "SELECT beatmapset_id FROM audio_guesses WHERE user_id = ? AND date = ? ORDER BY position",
+        (user, day),
+    )]
+
+
+def song_state(answer, day, guesses):
+    key = song_key(answer)
+    attempts = [{"map": search_map(BEATMAPS_BY_ID[n]), "correct": song_key(n) == key} for n in guesses]
+    won = any(item["correct"] for item in attempts)
+    finished = won or len(attempts) >= len(STAGES)
+    seconds = STAGES[-1] if finished else STAGES[len(attempts)]
+    state = {
+        "success": True, "date": day, "attempts": attempts, "won": won, "finished": finished,
+        "seconds": seconds, "audio": f"/api/audio/clip?day={day}&stage={seconds}",
+    }
+    if finished:
+        state["answer"] = public_map(BEATMAPS_BY_ID[answer])
+    return state
+
+
+@app.get("/api/audio/game")
+def audio_game(request: Request):
+    user = media_player(request, "audio-game", RATE_LIMIT_MAX_GAME_READS)
+    day = today_colombia()
+    with closing(get_connection()) as conn:
+        answer = daily_song(conn, day)
+        state = song_state(answer, day, song_history(conn, user, day))
+    state["backgrounds"] = decorative_backgrounds(day)
+    return state
+
+
+@app.get("/api/audio/clip")
+def audio_clip(request: Request):
+    user = media_player(request, "audio-clip", 90)
+    day = today_colombia()
+    if request.query_params.get("day", day) != day:
+        raise HTTPException(409, "A new song is ready. Refresh to play.")
+    with closing(get_connection()) as conn:
+        answer = daily_song(conn, day)
+        seconds = song_state(answer, day, song_history(conn, user, day))["seconds"]
+        pcm = conn.execute("SELECT pcm FROM audio_maps WHERE date = ?", (day,)).fetchone()[0]
+    return Response(wav_clip(pcm, seconds), media_type="audio/wav", headers={"Cache-Control": "private, no-store"})
+
+
+@app.post("/api/audio/guess")
+async def audio_guess(request: Request):
+    if not validate_same_origin(request):
+        raise HTTPException(403, "Invalid request origin.")
+    user = media_player(request, "audio-guess", RATE_LIMIT_MAX_GUESSES)
+    try:
+        body = await request.json()
+    except ValueError:
+        raise HTTPException(400, "Invalid guess.")
+    guess = body.get("beatmapset_id") if isinstance(body, dict) else None
+    if type(guess) is not int or guess not in BEATMAPS_BY_ID:
+        raise HTTPException(400, "Choose a song.")
+    day = today_colombia()
+    if body.get("date") != day:
+        raise HTTPException(409, "A new song is ready. Refresh to play.")
+    return await run_in_threadpool(record_audio_guess, user, day, guess)
+
+
+def record_audio_guess(user, day, guess):
+    with closing(get_connection()) as conn:
+        answer = daily_song(conn, day)
+        with conn:
+            conn.execute("BEGIN IMMEDIATE")
+            guesses = song_history(conn, user, day)
+            state = song_state(answer, day, guesses)
+            if state["finished"]:
+                return state
+            if any(song_key(n) == song_key(guess) for n in guesses):
+                raise HTTPException(409, "You already guessed this song.")
+            archive_map(conn, BEATMAPS_BY_ID[guess])
+            conn.execute("INSERT INTO audio_guesses VALUES (?, ?, ?, ?)", (user, day, len(guesses)+1, guess))
+            return song_state(answer, day, guesses + [guess])
+
+
 def decorative_backgrounds(day):
     classic = get_daily_map(day)["beatmapset_id"]
     with closing(get_connection()) as conn:
         excluded = {classic, background_answer(conn, day)}
+        song = conn.execute("SELECT beatmapset_id FROM audio_maps WHERE date = ?", (day,)).fetchone()
+        if song:
+            excluded.add(song[0])
     candidates = [url for item, url in zip(BEATMAPS, BACKGROUND_COVERS) if item["beatmapset_id"] not in excluded]
     return random.sample(candidates, min(30, len(candidates)))
 
