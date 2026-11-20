@@ -22,7 +22,7 @@ from server.audio_clip import STAGES, fetch_preview, wav_clip
 from threading import Lock
 from starlette.concurrency import run_in_threadpool
 from server.background_image import render_background
-from server.database import init_database, get_connection
+from server.database import DATABASE_URL, archived_data, get_connection, init_database, lock_guesses
 
 
 # =========================================================
@@ -135,7 +135,7 @@ def archive_map(conn, item):
     conn.execute(
         "INSERT INTO map_archive(beatmapset_id, data) VALUES (?, ?) "
         "ON CONFLICT(beatmapset_id) DO UPDATE SET data = excluded.data",
-        (item["beatmapset_id"], json.dumps(item)),
+        (item["beatmapset_id"], archived_data(item)),
     )
 
 
@@ -425,14 +425,11 @@ def consume_oauth_state(state: str):
     conn = get_connection()
     try:
         row = conn.execute(
-            "SELECT created_at FROM oauth_states WHERE state = ?",
+            "DELETE FROM oauth_states WHERE state = ? RETURNING created_at",
             (state,),
         ).fetchone()
-        if not row:
-            return None
-        conn.execute("DELETE FROM oauth_states WHERE state = ?", (state,))
         conn.commit()
-        return {"created_at": float(row["created_at"])}
+        return {"created_at": float(row["created_at"])} if row else None
     finally:
         conn.close()
 
@@ -1365,15 +1362,15 @@ async def search_maps_api(request: Request):
 def background_answer(conn, day):
     row = conn.execute("SELECT beatmapset_id FROM background_maps WHERE date = ?", (day,)).fetchone()
     if row:
-        return row[0]
+        return row["beatmapset_id"]
     classic = get_daily_map(day)["beatmapset_id"]
     choices = [map_id for map_id in ELIGIBLE_IDS if map_id != classic] or [classic]
     seed = hashlib.sha256(f"background:{day}".encode()).digest()
     map_id = choices[int.from_bytes(seed, "big") % len(choices)]
     with conn:
-        conn.execute("INSERT OR IGNORE INTO background_maps VALUES (?, ?)", (day, map_id))
+        conn.execute("INSERT INTO background_maps VALUES (?, ?) ON CONFLICT(date) DO NOTHING", (day, map_id))
         archive_map(conn, BEATMAPS_BY_ID[map_id])
-    return conn.execute("SELECT beatmapset_id FROM background_maps WHERE date = ?", (day,)).fetchone()[0]
+    return conn.execute("SELECT beatmapset_id FROM background_maps WHERE date = ?", (day,)).fetchone()["beatmapset_id"]
 
 
 def media_player(request, action, limit):
@@ -1390,7 +1387,7 @@ def background_history(conn, user_id, day):
         "SELECT beatmapset_id FROM background_guesses WHERE user_id = ? AND date = ? ORDER BY position",
         (user_id, day),
     )
-    return [row[0] for row in rows]
+    return [row["beatmapset_id"] for row in rows]
 
 
 def background_state(day, answer, guesses):
@@ -1450,7 +1447,7 @@ async def background_guess(request: Request):
     with closing(get_connection()) as conn:
         answer = background_answer(conn, day)
         with conn:
-            conn.execute("BEGIN IMMEDIATE")
+            lock_guesses(conn, user)
             guesses = background_history(conn, user, day)
             if answer not in guesses and len(guesses) < MAX_ATTEMPTS:
                 if guess in guesses:
@@ -1468,7 +1465,7 @@ def daily_song(conn, day):
     with audio_selection_lock:
         row = conn.execute("SELECT beatmapset_id FROM audio_maps WHERE date = ?", (day,)).fetchone()
         if row:
-            return row[0]
+            return row["beatmapset_id"]
         excluded = {get_daily_map(day)["beatmapset_id"], background_answer(conn, day)}
         candidates = [n for n in ELIGIBLE_IDS if n not in excluded] or ELIGIBLE_IDS
         for candidate in random.Random("audio:" + day).sample(candidates, min(12, len(candidates))):
@@ -1479,10 +1476,10 @@ def daily_song(conn, day):
             if pcm is None:
                 continue
             with conn:
-                conn.execute("INSERT OR IGNORE INTO audio_maps VALUES (?, ?, ?)", (day, candidate, pcm))
+                conn.execute("INSERT INTO audio_maps VALUES (?, ?, ?) ON CONFLICT(date) DO NOTHING", (day, candidate, pcm))
                 archive_map(conn, BEATMAPS_BY_ID[candidate])
                 conn.execute("UPDATE audio_maps SET pcm = NULL WHERE date < ? AND pcm IS NOT NULL", (day,))
-            return conn.execute("SELECT beatmapset_id FROM audio_maps WHERE date = ?", (day,)).fetchone()[0]
+            return conn.execute("SELECT beatmapset_id FROM audio_maps WHERE date = ?", (day,)).fetchone()["beatmapset_id"]
     raise HTTPException(503, "No playable preview found for today.")
 
 
@@ -1496,7 +1493,7 @@ def song_key(map_id):
 
 
 def song_history(conn, user, day):
-    return [row[0] for row in conn.execute(
+    return [row["beatmapset_id"] for row in conn.execute(
         "SELECT beatmapset_id FROM audio_guesses WHERE user_id = ? AND date = ? ORDER BY position",
         (user, day),
     )]
@@ -1537,7 +1534,7 @@ def audio_clip(request: Request):
     with closing(get_connection()) as conn:
         answer = daily_song(conn, day)
         seconds = song_state(answer, day, song_history(conn, user, day))["seconds"]
-        pcm = conn.execute("SELECT pcm FROM audio_maps WHERE date = ?", (day,)).fetchone()[0]
+        pcm = conn.execute("SELECT pcm FROM audio_maps WHERE date = ?", (day,)).fetchone()["pcm"]
     return Response(wav_clip(pcm, seconds), media_type="audio/wav", headers={"Cache-Control": "private, no-store"})
 
 
@@ -1563,7 +1560,7 @@ def record_audio_guess(user, day, guess):
     with closing(get_connection()) as conn:
         answer = daily_song(conn, day)
         with conn:
-            conn.execute("BEGIN IMMEDIATE")
+            lock_guesses(conn, user)
             guesses = song_history(conn, user, day)
             state = song_state(answer, day, guesses)
             if state["finished"]:
@@ -1581,7 +1578,7 @@ def decorative_backgrounds(day):
         excluded = {classic, background_answer(conn, day)}
         song = conn.execute("SELECT beatmapset_id FROM audio_maps WHERE date = ?", (day,)).fetchone()
         if song:
-            excluded.add(song[0])
+            excluded.add(song["beatmapset_id"])
     candidates = [url for item, url in zip(BEATMAPS, BACKGROUND_COVERS) if item["beatmapset_id"] not in excluded]
     return random.sample(candidates, min(30, len(candidates)))
 
@@ -1733,6 +1730,7 @@ async def process_guess(request: Request):
         # BUSCAR PROGRESO DE HOY
         # =================================================
 
+        lock_guesses(conn, user_id)
         existing = conn.execute(
             """
             SELECT
@@ -1977,33 +1975,37 @@ def results_query(conn, mode, today, user_id=None):
     if mode == "background":
         query = f"""
             SELECT g.user_id, g.date, COUNT(*) AS attempts,
-                   MAX(g.beatmapset_id = m.beatmapset_id) AS won, 0 AS score
+                   MAX(CASE WHEN g.beatmapset_id = m.beatmapset_id THEN 1 ELSE 0 END) AS won, 0 AS score
             FROM background_guesses g JOIN background_maps m ON m.date = g.date
             {where} GROUP BY g.user_id, g.date
-            HAVING won OR attempts >= :limit OR g.date < :today
+
         """
         limit = MAX_ATTEMPTS
     elif mode == "audio":
         # Archived metadata keeps the identity of sets removed from the live catalog.
         def same_song(a, t, b, u):
             return all(isinstance(v, str) for v in (a, t, b, u)) and song_identity(a, t) == song_identity(b, u)
-        conn.create_function("same_song", 4, same_song)
+        if DATABASE_URL:
+            match = "(CAST(guess.data AS jsonb) -> '_song_key') = (CAST(answer.data AS jsonb) -> '_song_key')"
+        else:
+            conn.create_function("same_song", 4, same_song)
+            match = """same_song(json_extract(guess.data, '$.artist'), json_extract(guess.data, '$.title'),
+                                 json_extract(answer.data, '$.artist'), json_extract(answer.data, '$.title'))"""
         query = f"""
-            SELECT g.user_id, g.date, COUNT(*) AS attempts, MAX(g.beatmapset_id = m.beatmapset_id OR
-                   same_song(json_extract(guess.data, '$.artist'), json_extract(guess.data, '$.title'),
-                             json_extract(answer.data, '$.artist'), json_extract(answer.data, '$.title'))) AS won,
+            SELECT g.user_id, g.date, COUNT(*) AS attempts, MAX(CASE WHEN g.beatmapset_id = m.beatmapset_id
+                   OR {match} THEN 1 ELSE 0 END) AS won,
                    0 AS score
             FROM audio_guesses g JOIN audio_maps m ON m.date = g.date
             LEFT JOIN map_archive guess ON guess.beatmapset_id = g.beatmapset_id
             LEFT JOIN map_archive answer ON answer.beatmapset_id = m.beatmapset_id
             {where} GROUP BY g.user_id, g.date
-            HAVING won OR attempts >= :limit OR g.date < :today
+
         """
         limit = len(STAGES)
     else:
         raise HTTPException(400, "Unknown game mode.")
     params["limit"] = limit
-    return query, params
+    return f"SELECT * FROM ({query}) AS rounds WHERE won = 1 OR attempts >= :limit OR date < :today", params
 
 
 @app.get("/api/stats")
@@ -2048,7 +2050,7 @@ async def get_user_stats(request: Request):
         mode = request.query_params.get("mode", "classic")
         today = today_colombia()
         query, params = results_query(conn, mode, today, user["id"])
-        rows = conn.execute(query + " ORDER BY g.date", params).fetchall()
+        rows = conn.execute(query + " ORDER BY date", params).fetchall()
 
     finally:
         conn.close()
@@ -2135,14 +2137,14 @@ async def get_leaderboard(mode: str = "classic"):
     try:
         query, params = results_query(conn, mode, today_colombia())
         order = ("total_points DESC, wins DESC, games DESC" if mode == "classic"
-                 else "wins DESC, (games > 0) DESC, games ASC")
+                 else "wins DESC, (COUNT(r.date) > 0) DESC, games ASC")
         rows = conn.execute(f"""
             WITH results AS ({query})
             SELECT u.osu_id, u.username, u.avatar_url, u.country,
                    COALESCE(SUM(r.score), 0) AS total_points, COUNT(r.date) AS games, COALESCE(SUM(r.won), 0) AS wins
             FROM users u LEFT JOIN results r ON u.id = r.user_id
             GROUP BY u.id
-            ORDER BY {order}, u.username COLLATE NOCASE, u.id
+            ORDER BY {order}, LOWER(u.username), u.id
             LIMIT 100
         """, params).fetchall()
     finally:

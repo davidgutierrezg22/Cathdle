@@ -11,7 +11,16 @@ Create **New → Web Service**, connect the GitHub repository, and use:
 - Start command: `uvicorn server.app:app --host 0.0.0.0 --port $PORT`
 - Health check: `/health`
 
-Catchdle uses SQLite. Because Render's normal filesystem is ephemeral, attach a **persistent disk** to the web service (paid web service) at `/var/data`. The app is configured to use `CATCHDLE_DB_PATH=/var/data/catchdle.db`. Render documents that persistent disks preserve filesystem changes across deploys/restarts; without one, SQLite data would be lost.
+### Production database (Neon PostgreSQL)
+
+All game modes share the same PostgreSQL database. Set the service secret
+`DATABASE_URL` to the connection string for the Catchdle project in Neon,
+including its SSL options. Render Free can use this configuration without a disk.
+The app creates missing tables on startup and does not fall back to SQLite when
+the configured PostgreSQL connection fails. Never commit the URL.
+
+For local development without `DATABASE_URL`, the app still uses SQLite. A
+disk-backed Render installation can also continue to use `CATCHDLE_DB_PATH`.
 
 ### Moving an existing service without losing scores
 
@@ -49,7 +58,7 @@ Set these in Render:
 ```text
 ENVIRONMENT=production
 COOKIE_SECURE=true
-CATCHDLE_DB_PATH=/var/data/catchdle.db
+DATABASE_URL=<private PostgreSQL connection string>
 OSU_CLIENT_ID=<your osu client id>
 OSU_CLIENT_SECRET=<your osu client secret>
 APP_ORIGIN=https://YOUR-SERVICE.onrender.com
