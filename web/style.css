@@ -3028,3 +3028,86 @@ body {
         right: 0;
     }
 }
+
+/* Standalone osu! sign-in */
+body.at-login > :not(.login-screen),
+body:not(.at-login) > .login-screen {
+    display: none;
+}
+
+.login-screen {
+    display: grid;
+    place-items: center;
+    min-height: 100vh;
+    min-height: 100svh;
+    padding: 44px 20px;
+    overflow: hidden;
+    text-align: center;
+    background:
+        repeating-radial-gradient(circle at 50% 50%, transparent 0 98px, #182438 99px, transparent 100px 101px),
+        radial-gradient(circle at center, #0d1626, #080c15 62%);
+}
+
+.login-content {
+    width: min(100%, 420px);
+    display: grid;
+    justify-items: center;
+}
+
+.login-emblem {
+    position: relative;
+    width: 112px;
+    aspect-ratio: 1;
+    border: 3px solid #518fff;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    background: repeating-radial-gradient(circle, transparent 0 15px, #254b81 16px 17px, transparent 18px 19px);
+    box-shadow: 0 0 46px #337dff28;
+}
+
+.login-emblem span {
+    width: 10px;
+    height: 10px;
+    background: #ff72ad;
+    border-radius: 50%;
+    box-shadow: 0 0 14px #ff72ad88;
+}
+
+.login-content h1 {
+    margin: 34px 0 0;
+    font-size: clamp(2.6rem, 7vw, 3.6rem);
+    font-weight: 900;
+    letter-spacing: -.055em;
+    line-height: 1;
+}
+
+.login-content h1 span { color: #ff64a5; }
+.login-subtitle { margin: 16px 0 44px; color: #b6c1d2; line-height: 1.5; }
+
+.login-action {
+    width: min(100%, 286px);
+    min-height: 56px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    border-radius: 10px;
+    background: linear-gradient(105deg, #ff83b8, #ff529a);
+    color: #280d1d;
+    font-weight: 800;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    text-decoration: none;
+    box-shadow: 0 6px 32px #fc44812e;
+}
+.login-action:hover { filter: brightness(1.09); }
+.login-action:focus-visible { outline: 3px solid white; outline-offset: 5px; }
+.login-target {
+    width: 18px;
+    height: 18px;
+    border: 2px solid currentColor;
+    border-radius: 50%;
+    background: radial-gradient(circle, currentColor 0 2px, transparent 3px 4px, currentColor 5px, transparent 6px);
+}
+.login-note { margin: 22px 0 0; color: #9baac0; font-size: .84rem; line-height: 1.6; }

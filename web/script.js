@@ -707,264 +707,25 @@ function createBackgroundCollage(backgrounds = []) {
    ========================================================= */
 
 async function loadCurrentUser() {
-
-    const userArea =
-        document.getElementById(
-            "userArea"
-        );
-
-
-    const loginButton =
-        document.getElementById(
-            "loginButton"
-        );
-
-
-    if (!userArea) {
-
-        console.error(
-            "❌ No existe #userArea"
-        );
-
-        return;
-    }
-
-
-    if (loginButton) {
-
-        loginButton.classList.remove(
-            "hidden"
-        );
-
-    }
-
-
-    try {
-
-        const response =
-            await fetch(
-                "/api/me",
-                {
-                    credentials:
-                        "include",
-
-                    cache:
-                        "no-store"
-                }
-            );
-
-
-        if (!response.ok) {
-
-            throw new Error(
-                `HTTP ${response.status}`
-            );
-
-        }
-
-
-        const data =
-            await response.json();
-
-
-        console.log(
-            "👤 Usuario:",
-            data
-        );
-
-
-        if (
-            !data.logged_in ||
-            !data.user
-        ) {
-
-            currentUser =
-                null;
-
-
-            if (loginButton) {
-
-                loginButton.classList.remove(
-                    "hidden"
-                );
-
-            }
-
-
-            const oldUser =
-                document.getElementById(
-                    "loggedUser"
-                );
-
-
-            if (oldUser) {
-
-                oldUser.remove();
-
-            }
-
-
-            console.log(
-                "ℹ️ No hay sesión de osu!"
-            );
-
-
-            return;
-        }
-
-
-        currentUser =
-            data.user;
-
-
-        if (loginButton) {
-
-            loginButton.classList.add(
-                "hidden"
-            );
-
-        }
-
-
-        let loggedUser =
-            document.getElementById(
-                "loggedUser"
-            );
-
-
-        if (!loggedUser) {
-
-            loggedUser =
-                document.createElement(
-                    "div"
-                );
-
-
-            loggedUser.id =
-                "loggedUser";
-
-
-            loggedUser.className =
-                "logged-user";
-
-
-            loggedUser.innerHTML = `
-                <button
-                    id="profileButton"
-                    class="profile-button"
-                    type="button"
-                    title="My Statistics"
-                >
-                    <img
-                        id="userAvatar"
-                        class="user-avatar"
-                        src=""
-                        alt="Avatar"
-                    >
-
-                    <span
-                        id="username"
-                        class="username"
-                    ></span>
-                </button>
-
-                <a
-                    class="logout-button"
-                    href="/auth/logout"
-                >
-                    LOGOUT
-                </a>
-            `;
-
-
-            userArea.appendChild(
-                loggedUser
-            );
-
-        }
-
-
-        loggedUser.classList.remove(
-            "hidden"
-        );
-
-
-        const userAvatar =
-            document.getElementById(
-                "userAvatar"
-            );
-
-
-        if (userAvatar) {
-            userAvatar.onerror = () => {
-                userAvatar.onerror = null;
-                userAvatar.src = "https://osu.ppy.sh/images/layout/avatar-guest.png";
-            };
-            userAvatar.src = data.user.avatar_url || "https://osu.ppy.sh/images/layout/avatar-guest.png";
-            userAvatar.alt = data.user.username || "Avatar";
-        }
-
-
-        const username =
-            document.getElementById(
-                "username"
-            );
-
-
-        if (username) {
-
-            username.textContent =
-                data.user.username ||
-                "User";
-
-        }
-
-
-        console.log(
-            "✅ Sesión activa:",
-            data.user.username
-        );
-
-
-        setupProfileButton();
-
-    } catch (error) {
-
-        console.error(
-            "❌ Error cargando usuario:",
-            error
-        );
-
-
-        currentUser =
-            null;
-
-
-        if (loginButton) {
-
-            loginButton.classList.remove(
-                "hidden"
-            );
-
-        }
-
-
-        const oldUser =
-            document.getElementById(
-                "loggedUser"
-            );
-
-
-        if (oldUser) {
-
-            oldUser.remove();
-
-        }
-
-    }
-
+    const response = await fetch("/api/me", { credentials: "include", cache: "no-store" });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+    const data = await response.json();
+    currentUser = data.logged_in ? data.user : null;
+    if (!currentUser) return;
+
+    const avatar = document.getElementById("userAvatar");
+    const fallbackAvatar = "https://osu.ppy.sh/images/layout/avatar-guest.png";
+    avatar.onerror = () => {
+        avatar.onerror = null;
+        avatar.src = fallbackAvatar;
+    };
+    avatar.src = currentUser.avatar_url || fallbackAvatar;
+    avatar.alt = currentUser.username || "Avatar";
+    document.getElementById("username").textContent = currentUser.username || "User";
+    document.getElementById("loggedUser").classList.remove("hidden");
+    document.body.classList.remove("at-login");
 }
-
 
 /* =========================================================
    LEADERBOARD
@@ -2141,34 +1902,20 @@ async function refreshGameState() {
     return data;
 }
 
-async function loadBackgrounds() {
-    if (!backgroundCollage) return;
-    try {
-        const cacheBust = Date.now().toString(36) + Math.random().toString(36).slice(2);
-        const response = await fetch(`/api/backgrounds?v=${cacheBust}`, {
-            cache: "no-store",
-            credentials: "omit"
-        });
-        const data = await response.json();
-        if (!response.ok || !data.success) throw new Error(data.error || `HTTP ${response.status}`);
-        if (Array.isArray(data.backgrounds)) createBackgroundCollage(data.backgrounds);
-    } catch (error) {
-        console.error("Background loading error:", error);
-    }
-}
-
 async function init() {
     try {
-        // The decorative background is public and must not depend on osu! login.
-        await loadBackgrounds();
         await loadCurrentUser();
         if (!currentUser) return;
-        await refreshGameState();
         setupProfileButton();
+        await refreshGameState();
         console.log("Catchdle initialized securely.");
     } catch (error) {
         console.error("Error initializing Catchdle:", error);
-        showMessage(error.message || "Could not load Catchdle. Check the server.", "error");
+        if (document.body.classList.contains("at-login")) {
+            document.querySelector(".login-note").textContent = "Couldn’t check your session. Refresh to try again.";
+        } else {
+            showMessage(error.message || "Could not load Catchdle. Check the server.", "error");
+        }
     }
 }
 

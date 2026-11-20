@@ -10,7 +10,19 @@
     <link rel="stylesheet" href="style.css">
 </head>
 
-<body>
+<body class="at-login">
+    <main id="loginScreen" class="login-screen" aria-labelledby="loginTitle">
+        <div class="login-content">
+            <div class="login-emblem" aria-hidden="true"><span></span></div>
+            <h1 id="loginTitle">Catch<span>dle</span></h1>
+            <p class="login-subtitle">Guess the daily osu!catch beatmapset.</p>
+            <a id="loginButton" class="login-action" href="/auth/login">
+                <span class="login-target" aria-hidden="true"></span>
+                Log in with osu!
+            </a>
+            <p class="login-note">Play the daily challenge and track your streak.</p>
+        </div>
+    </main>
 
     <!-- =========================================
          BACKGROUND COLLAGE
@@ -51,17 +63,6 @@
             id="userArea"
             class="user-area"
         >
-
-            <!-- LOGIN -->
-
-            <a
-                id="loginButton"
-                class="login-button"
-                href="/auth/login"
-            >
-                LOGIN WITH OSU!
-            </a>
-
 
             <!-- LOGGED USER -->
 
