@@ -23,6 +23,13 @@ def init_database():
 
 
     conn.execute("""
+        CREATE TABLE IF NOT EXISTS map_archive (
+            beatmapset_id INTEGER PRIMARY KEY,
+            data TEXT NOT NULL
+        )
+    """)
+
+    conn.execute("""
         CREATE TABLE IF NOT EXISTS daily_maps (
             date TEXT PRIMARY KEY,
             beatmapset_id INTEGER NOT NULL

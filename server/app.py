@@ -121,6 +121,18 @@ async def security_headers(request: Request, call_next):
 # DATASET EN MEMORIA
 # =========================================================
 
+def today_colombia():
+    return datetime.now(ZoneInfo("America/Bogota")).strftime("%Y-%m-%d")
+
+
+def archive_map(conn, item):
+    conn.execute(
+        "INSERT INTO map_archive(beatmapset_id, data) VALUES (?, ?) "
+        "ON CONFLICT(beatmapset_id) DO UPDATE SET data = excluded.data",
+        (item["beatmapset_id"], json.dumps(item)),
+    )
+
+
 def _load_beatmaps():
     try:
         with BEATMAPS_FILE.open("r", encoding="utf-8") as file:
@@ -150,10 +162,36 @@ def _load_beatmaps():
     if not valid:
         raise RuntimeError("beatmaps.json no contiene beatmapsets válidos")
 
-    valid.sort(key=lambda item: item["beatmapset_id"])
-    return valid, by_id
+    eligible_ids = sorted(by_id)
+    today = today_colombia()
+    conn = get_connection()
+    try:
+        # Keep today's removed maps available for search, guesses and restored history.
+        referenced_ids = conn.execute(
+            """SELECT beatmapset_id FROM daily_maps WHERE date = ?
+               UNION SELECT beatmapset_id FROM daily_guesses WHERE date = ?""",
+            (today, today),
+        )
+        for row in referenced_ids:
+            map_id = row["beatmapset_id"]
+            if map_id in by_id:
+                archive_map(conn, by_id[map_id])
+            else:
+                saved = conn.execute(
+                    "SELECT data FROM map_archive WHERE beatmapset_id = ?", (map_id,)
+                ).fetchone()
+                if saved:
+                    item = json.loads(saved["data"])
+                    by_id[map_id] = item
+                    valid.append(item)
+        conn.commit()
+    finally:
+        conn.close()
 
-BEATMAPS, BEATMAPS_BY_ID = _load_beatmaps()
+    valid.sort(key=lambda item: item["beatmapset_id"])
+    return valid, by_id, eligible_ids
+
+BEATMAPS, BEATMAPS_BY_ID, ELIGIBLE_IDS = _load_beatmaps()
 BACKGROUND_COVERS = [
     item.get("cover_url")
     or f"https://assets.ppy.sh/beatmaps/{item['beatmapset_id']}/covers/cover.jpg"
@@ -163,10 +201,6 @@ BACKGROUND_COVERS = [
 # =========================================================
 # MAPA DIARIO ESTABLE
 # =========================================================
-
-def today_colombia():
-    return datetime.now(ZoneInfo("America/Bogota")).strftime("%Y-%m-%d")
-
 
 def _daily_candidate_id(today: str) -> int:
     """Select the daily map using Catchdle's original deterministic algorithm.
@@ -180,8 +214,8 @@ def _daily_candidate_id(today: str) -> int:
         hash_value = ((hash_value << 5) - hash_value) + ord(character)
         hash_value &= 0xFFFFFFFF
     hash_value &= 0x7FFFFFFF
-    index = hash_value % len(BEATMAPS)
-    return int(BEATMAPS[index]["beatmapset_id"])
+    index = hash_value % len(ELIGIBLE_IDS)
+    return ELIGIBLE_IDS[index]
 
 
 def get_daily_map(today: str | None = None):
@@ -193,38 +227,17 @@ def get_daily_map(today: str | None = None):
             (today,),
         ).fetchone()
 
-        candidate_id = _daily_candidate_id(today)
-
-        if row:
-            stored_id = int(row["beatmapset_id"])
-            if stored_id != candidate_id:
-                # A previous hardened build used a different hash algorithm.
-                # Repair only that stale day's selection. Any partial result for
-                # that day belongs to the old answer, so it must be reset too.
-                logger.warning(
-                    "Repairing daily map for %s: %s -> %s",
-                    today, stored_id, candidate_id,
-                )
-                conn.execute(
-                    "UPDATE daily_maps SET beatmapset_id = ? WHERE date = ?",
-                    (candidate_id, today),
-                )
-                conn.execute("DELETE FROM daily_guesses WHERE date = ?", (today,))
-                conn.execute("DELETE FROM daily_results WHERE date = ?", (today,))
-                conn.commit()
-            else:
-                return BEATMAPS_BY_ID.get(stored_id)
-        else:
+        if not row:
             conn.execute(
-                "INSERT INTO daily_maps(date, beatmapset_id) VALUES (?, ?)",
-                (today, candidate_id),
+                "INSERT INTO daily_maps(date, beatmapset_id) VALUES (?, ?) ON CONFLICT(date) DO NOTHING",
+                (today, _daily_candidate_id(today)),
             )
+            row = conn.execute(
+                "SELECT beatmapset_id FROM daily_maps WHERE date = ?", (today,)
+            ).fetchone()
+            archive_map(conn, BEATMAPS_BY_ID[row["beatmapset_id"]])
             conn.commit()
-        row = conn.execute(
-            "SELECT beatmapset_id FROM daily_maps WHERE date = ?",
-            (today,),
-        ).fetchone()
-        return BEATMAPS_BY_ID.get(int(row["beatmapset_id"])) if row else None
+        return BEATMAPS_BY_ID.get(row["beatmapset_id"])
     finally:
         conn.close()
 
@@ -1588,6 +1601,7 @@ async def process_guess(request: Request):
         # =================================================
 
         try:
+            archive_map(conn, guessed_map)
             conn.execute(
                 """
                 INSERT INTO daily_guesses (
@@ -1764,10 +1778,10 @@ async def get_user_stats(request: Request):
             """
             SELECT date, attempts, won, score
             FROM daily_results
-            WHERE user_id = ?
+            WHERE user_id = ? AND (won = 1 OR attempts >= ? OR date < ?)
             ORDER BY date ASC
             """,
-            (user["id"],)
+            (user["id"], MAX_ATTEMPTS, today_colombia())
         ).fetchall()
 
     finally:
@@ -1890,7 +1904,7 @@ async def get_leaderboard():
             FROM users u
 
             LEFT JOIN daily_results dr
-                ON dr.user_id = u.id
+                ON dr.user_id = u.id AND (dr.won = 1 OR dr.attempts >= ? OR dr.date < ?)
 
             GROUP BY u.id
 
@@ -1901,7 +1915,7 @@ async def get_leaderboard():
                 u.username ASC
 
             LIMIT 100
-            """
+            """, (MAX_ATTEMPTS, today_colombia())
         ).fetchall()
 
     finally:

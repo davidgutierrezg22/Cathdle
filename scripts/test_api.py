@@ -1,40 +1,44 @@
 import os
-import requests
+
+import httpx
 from dotenv import load_dotenv
 
-# Cargar las variables del archivo .env
-load_dotenv()
 
-client_id = os.getenv("OSU_CLIENT_ID")
-client_secret = os.getenv("OSU_CLIENT_SECRET")
+def main():
+    load_dotenv()
+    client_id = os.getenv("OSU_CLIENT_ID")
+    client_secret = os.getenv("OSU_CLIENT_SECRET")
+    if not client_id or not client_secret:
+        print("Faltan las credenciales de osu! en .env")
+        return 1
 
-# Comprobar que las variables existen
-if not client_id or not client_secret:
-    print("❌ No se encontraron las credenciales en .env")
-    exit()
+    try:
+        response = httpx.post(
+            "https://osu.ppy.sh/oauth/token",
+            data={
+                "client_id": client_id,
+                "client_secret": client_secret,
+                "grant_type": "client_credentials",
+                "scope": "public",
+            },
+            timeout=15,
+        )
+        response.raise_for_status()
+        token = response.json()
+    except httpx.HTTPStatusError as error:
+        print(f"osu! rechazó la solicitud (HTTP {error.response.status_code})")
+        return 1
+    except (httpx.RequestError, ValueError):
+        print("No se pudo obtener una respuesta válida de osu!.")
+        return 1
 
-# Solicitar un Access Token
-url = "https://osu.ppy.sh/oauth/token"
+    if not isinstance(token, dict) or not token.get("access_token"):
+        print("La respuesta de osu! no contiene un token.")
+        return 1
 
-data = {
-    "client_id": client_id,
-    "client_secret": client_secret,
-    "grant_type": "client_credentials",
-    "scope": "public"
-}
+    print("Conexión con osu! exitosa.")
+    return 0
 
-response = requests.post(url, data=data)
 
-if response.status_code == 200:
-    token_data = response.json()
-
-    print("✅ Conexión con osu! exitosa")
-    print("✅ Access Token obtenido")
-    print()
-    print("Tipo:", token_data["token_type"])
-    print("Expira en:", token_data["expires_in"], "segundos")
-
-else:
-    print("❌ Error al obtener el token")
-    print("Código:", response.status_code)
-    print("Respuesta:", response.text)
+if __name__ == "__main__":
+    raise SystemExit(main())

@@ -1792,66 +1792,18 @@ function showLoseScreen() {
    COUNTDOWN
    ========================================================= */
 
-function getNextMidnight() {
-
-    const now =
-        new Date();
-
-
-    const next =
-        new Date(
-            now
-        );
-
-
-    next.setHours(
-        24,
-        0,
-        0,
-        0
-    );
-
-
-    return next;
-
+function getNextMidnight(date) {
+    const midnight = new Date(date + "T00:00:00-05:00");
+    midnight.setUTCDate(midnight.getUTCDate() + 1);
+    return midnight;
 }
 
-
 function updateCountdown() {
+    const element = document.getElementById("winCountdown");
+    if (!element) return;
 
-    const element =
-        document.getElementById(
-            "winCountdown"
-        );
-
-
-    if (!element) {
-        return;
-    }
-
-
-    const now =
-        new Date();
-
-
-    const next =
-        getNextMidnight();
-
-
-    let difference =
-        next.getTime() -
-        now.getTime();
-
-
-    if (
-        difference < 0
-    ) {
-
-        difference =
-            0;
-
-    }
-
+    const next = getNextMidnight(gameState?.date || getColombiaDate());
+    const difference = Math.max(0, next.getTime() - Date.now());
 
     const totalSeconds =
         Math.floor(
