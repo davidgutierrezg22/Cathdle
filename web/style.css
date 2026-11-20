@@ -3253,3 +3253,6 @@ body:not(.at-login) > .login-screen {
 #audioPuzzle p { margin:0; font-size:14px; color:#ddd4df; }
 #audioPuzzle #clipLength { color:#ffa1cb; font-weight:800; }
 #retryAudio { margin:0 auto 12px; padding:6px 12px; cursor:pointer; }
+
+.ranking-profile { padding: 3px 0; border: 0; background: transparent; color: inherit; font: inherit; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
+.ranking-profile:focus-visible { outline: 2px solid #ffa8cf; }

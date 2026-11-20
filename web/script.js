@@ -2,6 +2,8 @@ const requestedMode = new URLSearchParams(location.search).get("mode");
 const backgroundMode = requestedMode === "background";
 const audioMode = requestedMode === "audio";
 const mediaMode = audioMode || backgroundMode;
+const activeMode = mediaMode ? requestedMode : "classic";
+const modeLabel = audioMode ? "Audio" : backgroundMode ? "Background" : "Classic";
 const modePath = mediaMode ? "/api/" + requestedMode : "/api";
 const GAME_URL = modePath + "/game";
 const SEARCH_URL = "/api/search";
@@ -540,7 +542,7 @@ async function loadLeaderboard() {
     body.innerHTML = `
         <tr>
             <td
-                colspan="6"
+                colspan="${mediaMode ? 5 : 6}"
                 class="leaderboard-loading"
             >
                 Loading leaderboard...
@@ -553,7 +555,7 @@ async function loadLeaderboard() {
 
         const response =
             await fetch(
-                "/api/leaderboard",
+                "/api/leaderboard?mode=" + activeMode,
                 {
                     credentials:
                         "include",
@@ -596,7 +598,7 @@ async function loadLeaderboard() {
             body.innerHTML = `
                 <tr>
                     <td
-                        colspan="6"
+                        colspan="${mediaMode ? 5 : 6}"
                         class="leaderboard-empty"
                     >
                         No players yet.
@@ -682,9 +684,7 @@ async function loadLeaderboard() {
 
                                 <td>
 
-                                    <div
-                                        class="player-cell"
-                                    >
+                                    <div class="player-cell">
 
                                         <img
                                             class="player-avatar"
@@ -699,7 +699,9 @@ async function loadLeaderboard() {
                                             <div
                                                 class="player-name"
                                             >
-                                                ${username}
+                                                ${Number(player.osu_id) === Number(currentUser?.id)
+                                                    ? `<button type="button" class="ranking-profile" data-open-profile>${username}</button>`
+                                                    : username}
                                             </div>
 
                                             <div
@@ -714,11 +716,7 @@ async function loadLeaderboard() {
 
                                 </td>
 
-                                <td
-                                    class="points-cell"
-                                >
-                                    ${points}
-                                </td>
+                                ${mediaMode ? "" : `<td class="points-cell">${points}</td>`}
 
                                 <td>
                                     ${wins}
@@ -751,7 +749,7 @@ async function loadLeaderboard() {
         body.innerHTML = `
             <tr>
                 <td
-                    colspan="6"
+                    colspan="${mediaMode ? 5 : 6}"
                     class="leaderboard-error"
                 >
                     Could not load leaderboard.
@@ -779,6 +777,8 @@ function openLeaderboard() {
     }
 
 
+    modal.querySelector("h2").textContent = modeLabel + " Leaderboard";
+    modal.querySelector("th:nth-child(3)").classList.toggle("hidden", mediaMode);
     modal.classList.remove(
         "hidden"
     );
@@ -839,7 +839,7 @@ async function loadStats() {
 
         const response =
             await fetch(
-                "/api/stats?mode=" + (mediaMode ? requestedMode : "classic"),
+                "/api/stats?mode=" + activeMode,
                 {
                     credentials:
                         "include",
@@ -1084,7 +1084,6 @@ async function openStats() {
     }
 
 
-    const modeLabel = audioMode ? "Audio" : backgroundMode ? "Background" : "Classic";
     document.getElementById("statsTitle").textContent = modeLabel + " statistics";
     document.getElementById("statPoints").parentElement.classList.toggle("hidden", mediaMode);
     modal.classList.remove(
@@ -1121,22 +1120,13 @@ function closeStats() {
    PROFILE BUTTON
    ========================================================= */
 
-function setupProfileButton() {
-
-    const profileButton =
-        document.getElementById(
-            "profileButton"
-        );
-
-
-    if (!profileButton) {
-        return;
+document.getElementById("profileButton").addEventListener("click", openStats);
+document.getElementById("leaderboardBody").addEventListener("click", event => {
+    if (event.target.closest("[data-open-profile]")) {
+        closeLeaderboard();
+        openStats();
     }
-
-
-    profileButton.addEventListener("click", openStats);
-}
-
+});
 
 const closeStatsButton =
     document.getElementById(
@@ -1676,7 +1666,6 @@ async function init() {
             await loadLoginCovers();
             return;
         }
-        setupProfileButton();
         await refreshGameState();
         console.log("Catchdle initialized securely.");
     } catch (error) {

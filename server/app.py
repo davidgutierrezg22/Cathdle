@@ -1965,21 +1965,22 @@ async def process_guess(request: Request):
 # ESTADÍSTICAS DEL USUARIO
 # =========================================================
 
-def profile_results(conn, user_id, mode, today):
+def results_query(conn, mode, today, user_id=None):
+    params = {"today": today, "user": user_id}
+    where = "WHERE g.user_id = :user" if user_id is not None else ""
     if mode == "classic":
-        return conn.execute(
-            """SELECT date, attempts, won, score FROM daily_results
-               WHERE user_id = ? AND (won = 1 OR attempts >= ? OR date < ?) ORDER BY date""",
-            (user_id, MAX_ATTEMPTS, today),
-        ).fetchall()
+        params["limit"] = MAX_ATTEMPTS
+        return f"""SELECT g.user_id, g.date, g.attempts, g.won, g.score FROM daily_results g
+                   WHERE (g.won = 1 OR g.attempts >= :limit OR g.date < :today)
+                   {"AND g.user_id = :user" if user_id is not None else ""}""", params
 
     if mode == "background":
-        query = """
-            SELECT g.date, COUNT(*) AS attempts,
+        query = f"""
+            SELECT g.user_id, g.date, COUNT(*) AS attempts,
                    MAX(g.beatmapset_id = m.beatmapset_id) AS won, 0 AS score
             FROM background_guesses g JOIN background_maps m ON m.date = g.date
-            WHERE g.user_id = ? GROUP BY g.date
-            HAVING won OR attempts >= ? OR g.date < ? ORDER BY g.date
+            {where} GROUP BY g.user_id, g.date
+            HAVING won OR attempts >= :limit OR g.date < :today
         """
         limit = MAX_ATTEMPTS
     elif mode == "audio":
@@ -1987,21 +1988,22 @@ def profile_results(conn, user_id, mode, today):
         def same_song(a, t, b, u):
             return all(isinstance(v, str) for v in (a, t, b, u)) and song_identity(a, t) == song_identity(b, u)
         conn.create_function("same_song", 4, same_song)
-        query = """
-            SELECT g.date, COUNT(*) AS attempts, MAX(g.beatmapset_id = m.beatmapset_id OR
+        query = f"""
+            SELECT g.user_id, g.date, COUNT(*) AS attempts, MAX(g.beatmapset_id = m.beatmapset_id OR
                    same_song(json_extract(guess.data, '$.artist'), json_extract(guess.data, '$.title'),
                              json_extract(answer.data, '$.artist'), json_extract(answer.data, '$.title'))) AS won,
                    0 AS score
             FROM audio_guesses g JOIN audio_maps m ON m.date = g.date
             LEFT JOIN map_archive guess ON guess.beatmapset_id = g.beatmapset_id
             LEFT JOIN map_archive answer ON answer.beatmapset_id = m.beatmapset_id
-            WHERE g.user_id = ? GROUP BY g.date
-            HAVING won OR attempts >= ? OR g.date < ? ORDER BY g.date
+            {where} GROUP BY g.user_id, g.date
+            HAVING won OR attempts >= :limit OR g.date < :today
         """
         limit = len(STAGES)
     else:
         raise HTTPException(400, "Unknown game mode.")
-    return conn.execute(query, (user_id, limit, today)).fetchall()
+    params["limit"] = limit
+    return query, params
 
 
 @app.get("/api/stats")
@@ -2045,7 +2047,8 @@ async def get_user_stats(request: Request):
 
         mode = request.query_params.get("mode", "classic")
         today = today_colombia()
-        rows = profile_results(conn, user["id"], mode, today)
+        query, params = results_query(conn, mode, today, user["id"])
+        rows = conn.execute(query + " ORDER BY g.date", params).fetchall()
 
     finally:
         conn.close()
@@ -2127,54 +2130,21 @@ async def get_user_stats(request: Request):
 # =========================================================
 
 @app.get("/api/leaderboard")
-async def get_leaderboard():
-
+async def get_leaderboard(mode: str = "classic"):
     conn = get_connection()
-
     try:
-
-        rows = conn.execute(
-            """
-            SELECT
-                u.username,
-                u.avatar_url,
-                u.country,
-
-                COALESCE(
-                    SUM(dr.score),
-                    0
-                ) AS total_points,
-
-                COUNT(dr.id) AS games,
-
-                COALESCE(
-                    SUM(
-                        CASE
-                            WHEN dr.won = 1
-                            THEN 1
-                            ELSE 0
-                        END
-                    ),
-                    0
-                ) AS wins
-
-            FROM users u
-
-            LEFT JOIN daily_results dr
-                ON dr.user_id = u.id AND (dr.won = 1 OR dr.attempts >= ? OR dr.date < ?)
-
+        query, params = results_query(conn, mode, today_colombia())
+        order = ("total_points DESC, wins DESC, games DESC" if mode == "classic"
+                 else "wins DESC, (games > 0) DESC, games ASC")
+        rows = conn.execute(f"""
+            WITH results AS ({query})
+            SELECT u.osu_id, u.username, u.avatar_url, u.country,
+                   COALESCE(SUM(r.score), 0) AS total_points, COUNT(r.date) AS games, COALESCE(SUM(r.won), 0) AS wins
+            FROM users u LEFT JOIN results r ON u.id = r.user_id
             GROUP BY u.id
-
-            ORDER BY
-                total_points DESC,
-                wins DESC,
-                games DESC,
-                u.username ASC
-
+            ORDER BY {order}, u.username COLLATE NOCASE, u.id
             LIMIT 100
-            """, (MAX_ATTEMPTS, today_colombia())
-        ).fetchall()
-
+        """, params).fetchall()
     finally:
 
         conn.close()
@@ -2202,6 +2172,7 @@ async def get_leaderboard():
 
 
         leaderboard.append({
+            "osu_id": row["osu_id"],
 
             "rank":
                 rank,
