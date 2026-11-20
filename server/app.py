@@ -1486,9 +1486,13 @@ def daily_song(conn, day):
     raise HTTPException(503, "No playable preview found for today.")
 
 
+def song_identity(artist, title):
+    return tuple(" ".join(value.casefold().split()) for value in (artist, title))
+
+
 def song_key(map_id):
     item = BEATMAPS_BY_ID[map_id]
-    return tuple(" ".join(item[field].casefold().split()) for field in ("artist", "title"))
+    return song_identity(item["artist"], item["title"])
 
 
 def song_history(conn, user, day):
@@ -1961,6 +1965,45 @@ async def process_guess(request: Request):
 # ESTADÍSTICAS DEL USUARIO
 # =========================================================
 
+def profile_results(conn, user_id, mode, today):
+    if mode == "classic":
+        return conn.execute(
+            """SELECT date, attempts, won, score FROM daily_results
+               WHERE user_id = ? AND (won = 1 OR attempts >= ? OR date < ?) ORDER BY date""",
+            (user_id, MAX_ATTEMPTS, today),
+        ).fetchall()
+
+    if mode == "background":
+        query = """
+            SELECT g.date, COUNT(*) AS attempts,
+                   MAX(g.beatmapset_id = m.beatmapset_id) AS won, 0 AS score
+            FROM background_guesses g JOIN background_maps m ON m.date = g.date
+            WHERE g.user_id = ? GROUP BY g.date
+            HAVING won OR attempts >= ? OR g.date < ? ORDER BY g.date
+        """
+        limit = MAX_ATTEMPTS
+    elif mode == "audio":
+        # Archived metadata keeps the identity of sets removed from the live catalog.
+        def same_song(a, t, b, u):
+            return all(isinstance(v, str) for v in (a, t, b, u)) and song_identity(a, t) == song_identity(b, u)
+        conn.create_function("same_song", 4, same_song)
+        query = """
+            SELECT g.date, COUNT(*) AS attempts, MAX(g.beatmapset_id = m.beatmapset_id OR
+                   same_song(json_extract(guess.data, '$.artist'), json_extract(guess.data, '$.title'),
+                             json_extract(answer.data, '$.artist'), json_extract(answer.data, '$.title'))) AS won,
+                   0 AS score
+            FROM audio_guesses g JOIN audio_maps m ON m.date = g.date
+            LEFT JOIN map_archive guess ON guess.beatmapset_id = g.beatmapset_id
+            LEFT JOIN map_archive answer ON answer.beatmapset_id = m.beatmapset_id
+            WHERE g.user_id = ? GROUP BY g.date
+            HAVING won OR attempts >= ? OR g.date < ? ORDER BY g.date
+        """
+        limit = len(STAGES)
+    else:
+        raise HTTPException(400, "Unknown game mode.")
+    return conn.execute(query, (user_id, limit, today)).fetchall()
+
+
 @app.get("/api/stats")
 async def get_user_stats(request: Request):
 
@@ -2000,15 +2043,9 @@ async def get_user_stats(request: Request):
                 status_code=404
             )
 
-        rows = conn.execute(
-            """
-            SELECT date, attempts, won, score
-            FROM daily_results
-            WHERE user_id = ? AND (won = 1 OR attempts >= ? OR date < ?)
-            ORDER BY date ASC
-            """,
-            (user["id"], MAX_ATTEMPTS, today_colombia())
-        ).fetchall()
+        mode = request.query_params.get("mode", "classic")
+        today = today_colombia()
+        rows = profile_results(conn, user["id"], mode, today)
 
     finally:
         conn.close()
@@ -2026,20 +2063,14 @@ async def get_user_stats(request: Request):
         if row["won"] == 1
     }
 
-    # Racha actual: solo existe si la última partida registrada
-    # corresponde a hoy en Colombia y fue una victoria.
     from datetime import date, timedelta
-    from zoneinfo import ZoneInfo
-
+    cursor = date.fromisoformat(today)
+    if not rows or rows[-1]["date"] != today:
+        cursor -= timedelta(days=1)
     current_streak = 0
-    today_date = datetime.now(ZoneInfo("America/Bogota")).date()
-
-    if winning_dates and today_date.isoformat() in winning_dates:
-        cursor = today_date
-
-        while cursor.isoformat() in winning_dates:
-            current_streak += 1
-            cursor -= timedelta(days=1)
+    while cursor.isoformat() in winning_dates:
+        current_streak += 1
+        cursor -= timedelta(days=1)
 
     # Mejor racha histórica.
     best_streak = 0

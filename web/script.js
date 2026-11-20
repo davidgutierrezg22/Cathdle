@@ -839,7 +839,7 @@ async function loadStats() {
 
         const response =
             await fetch(
-                "/api/stats",
+                "/api/stats?mode=" + (mediaMode ? requestedMode : "classic"),
                 {
                     credentials:
                         "include",
@@ -1084,6 +1084,9 @@ async function openStats() {
     }
 
 
+    const modeLabel = audioMode ? "Audio" : backgroundMode ? "Background" : "Classic";
+    document.getElementById("statsTitle").textContent = modeLabel + " statistics";
+    document.getElementById("statPoints").parentElement.classList.toggle("hidden", mediaMode);
     modal.classList.remove(
         "hidden"
     );
@@ -1131,34 +1134,8 @@ function setupProfileButton() {
     }
 
 
-    if (
-        profileButton.dataset.statsReady ===
-        "true"
-    ) {
-        return;
-    }
-
-
-    profileButton.dataset.statsReady =
-        "true";
-
-
-    profileButton.addEventListener(
-        "click",
-        openStats
-    );
-
+    profileButton.addEventListener("click", openStats);
 }
-
-
-/* =========================================================
-   STATISTICS CLOSE BUTTONS
-   ========================================================= */
-
-const profileButton =
-    document.getElementById(
-        "profileButton"
-    );
 
 
 const closeStatsButton =
@@ -1177,16 +1154,6 @@ const statsModal =
     document.getElementById(
         "statsModal"
     );
-
-
-if (profileButton) {
-
-    profileButton.addEventListener(
-        "click",
-        openStats
-    );
-
-}
 
 
 if (closeStatsButton) {
