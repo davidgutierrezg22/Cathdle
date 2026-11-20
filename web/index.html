@@ -141,134 +141,34 @@
 
 
         <!-- =====================================
-             HOW TO PLAY
+             SEARCH
         ====================================== -->
 
-        <section class="how-to-play">
-
-            <h2>
-                How to Play
-            </h2>
+        <section class="search-area">
 
 
-            <p>
-
-                Guess the daily osu!catch beatmapset in
-                <strong>10 attempts.</strong>
-
-            </p>
-
-
-            <p>
-
-                Choose a beatmapset and compare its information with
-                today's answer. The colors and arrows show how close
-                your guess is.
-
-            </p>
+            <input
+                type="text"
+                id="mapInput"
+                aria-label="Search artist, mapper or beatmap"
+                autocomplete="off"
+                placeholder="Search artist, mapper or beatmap..."
+            >
 
 
-            <div class="legend">
+            <div
+                id="suggestions"
+                class="suggestions hidden"
+            ></div>
 
 
-                <div class="legend-item">
+            <button
+                id="guessButton"
+                disabled
+            >
+                GUESS
+            </button>
 
-                    <span class="legend-icon correct-icon">
-                        ✓
-                    </span>
-
-                    <span>
-                        <strong>Green</strong>
-                        means the value is correct.
-                    </span>
-
-                </div>
-
-
-                <div class="legend-item">
-
-                    <span class="legend-icon close-icon">
-                        ≈
-                    </span>
-
-                    <span>
-                        <strong>Yellow</strong>
-                        means the value is close.
-                    </span>
-
-                </div>
-
-
-                <div class="legend-item">
-
-                    <span class="legend-icon wrong-icon">
-                        ×
-                    </span>
-
-                    <span>
-                        <strong>Red</strong>
-                        means the value is incorrect.
-                    </span>
-
-                </div>
-
-
-                <div class="legend-item">
-
-                    <span class="legend-icon arrow-icon">
-                        ↕
-                    </span>
-
-                    <span>
-                        Arrows show whether the correct value is higher or lower.
-                    </span>
-
-                </div>
-
-
-            </div>
-
-
-
-            <div class="clue-explanation">
-
-                <h3>
-                    Clues
-                </h3>
-
-
-                <p>
-
-                    <strong>After 4 attempts:</strong>
-                    CS, AR, OD and HP can be revealed.
-
-                </p>
-
-
-                <p>
-
-                    <strong>After 7 attempts:</strong>
-                    the difficulty name can be revealed.
-
-                </p>
-
-
-                <p>
-
-                    <strong>After 9 attempts:</strong>
-                    the map background can be revealed.
-
-                </p>
-
-            </div>
-
-
-            <p class="highest-rated">
-
-                Only the highest-rated osu!catch difficulty from each
-                beatmapset is used.
-
-            </p>
 
         </section>
 
@@ -289,6 +189,90 @@
         </div>
 
 
+
+        <!-- =====================================
+             MESSAGE
+        ====================================== -->
+
+        <div
+            id="message"
+            class="message"
+        ></div>
+
+
+
+        <!-- =====================================
+             RESULTS TABLE
+        ====================================== -->
+
+        <section class="results-section">
+
+
+            <div class="results-scroll">
+
+
+                <div class="results-table">
+
+
+                    <!-- HEADER -->
+
+                    <div class="results-header">
+
+
+                        <div>
+                            BEATMAP
+                        </div>
+
+
+                        <div>
+                            ARTIST
+                        </div>
+
+
+                        <div>
+                            MAPPER
+                        </div>
+
+
+                        <div>
+                            STARS
+                        </div>
+
+
+                        <div>
+                            BPM
+                        </div>
+
+
+                        <div>
+                            LENGTH
+                        </div>
+
+
+                    </div>
+
+
+                    <!-- ATTEMPTS -->
+
+                    <div id="attempts"></div>
+
+
+                </div>
+
+
+            </div>
+
+
+        </section>
+
+        <section class="board-key" aria-label="Color indicators">
+            <div class="legend">
+                <span class="legend-item"><b class="legend-icon correct-icon" aria-hidden="true">✓</b> Correct</span>
+                <span class="legend-item"><b class="legend-icon close-icon" aria-hidden="true">≈</b> Close</span>
+                <span class="legend-item"><b class="legend-icon wrong-icon" aria-hidden="true">×</b> Incorrect</span>
+                <span class="legend-item"><b class="legend-icon arrow-icon" aria-hidden="true">↑↓</b> Higher / lower</span>
+            </div>
+        </section>
 
         <!-- =====================================
              CLUES
@@ -514,112 +498,76 @@
 
 
         <!-- =====================================
-             SEARCH
+             HOW TO PLAY
         ====================================== -->
 
-        <section class="search-area">
+        <details class="how-to-play">
+
+            <summary>How to play</summary>
 
 
-            <input
-                type="text"
-                id="mapInput"
-                autocomplete="off"
-                placeholder="Search artist, mapper or beatmap..."
-            >
+            <p>
+
+                Guess the daily osu!catch beatmapset in
+                <strong>10 attempts.</strong>
+
+            </p>
 
 
-            <div
-                id="suggestions"
-                class="suggestions hidden"
-            ></div>
+            <p>
+
+                Choose a beatmapset and compare its information with
+                today's answer. The colors and arrows show how close
+                your guess is.
+
+            </p>
 
 
-            <button
-                id="guessButton"
-                disabled
-            >
-                GUESS
-            </button>
+            <div class="clue-explanation">
+
+                <h3>
+                    Clues
+                </h3>
 
 
-        </section>
+                <p>
+
+                    <strong>After 4 attempts:</strong>
+                    CS, AR, OD and HP can be revealed.
+
+                </p>
 
 
+                <p>
 
-        <!-- =====================================
-             MESSAGE
-        ====================================== -->
+                    <strong>After 7 attempts:</strong>
+                    the difficulty name can be revealed.
 
-        <div
-            id="message"
-            class="message"
-        ></div>
+                </p>
 
 
+                <p>
 
-        <!-- =====================================
-             RESULTS TABLE
-        ====================================== -->
+                    <strong>After 9 attempts:</strong>
+                    the map background can be revealed.
 
-        <section class="results-section">
-
-
-            <div class="results-scroll">
-
-
-                <div class="results-table">
-
-
-                    <!-- HEADER -->
-
-                    <div class="results-header">
-
-
-                        <div>
-                            BEATMAP
-                        </div>
-
-
-                        <div>
-                            ARTIST
-                        </div>
-
-
-                        <div>
-                            MAPPER
-                        </div>
-
-
-                        <div>
-                            STARS
-                        </div>
-
-
-                        <div>
-                            BPM
-                        </div>
-
-
-                        <div>
-                            LENGTH
-                        </div>
-
-
-                    </div>
-
-
-                    <!-- ATTEMPTS -->
-
-                    <div id="attempts"></div>
-
-
-                </div>
-
+                </p>
 
             </div>
 
 
-        </section>
+            <p class="highest-rated">
+
+                Only the highest-rated osu!catch difficulty from each
+                beatmapset is used.
+
+            </p>
+
+        </details>
+
+
+
+
 
 
 
