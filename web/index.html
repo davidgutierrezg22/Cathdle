@@ -7,19 +7,20 @@
 
     <title>Catchdle</title>
 
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="style.css?v=languages-1">
 </head>
 
 <body class="at-login">
     <main id="loginScreen" class="login-screen" aria-labelledby="loginTitle">
         <div id="loginCovers" class="login-covers" aria-hidden="true"></div>
+        <div class="login-language"><select class="language-select" aria-label="Language"></select></div>
         <div class="login-content">
             <h1 id="loginTitle">Catchdle</h1>
             <p class="login-subtitle">Guess the daily osu!catch beatmapset.</p>
             <a id="loginButton" class="login-action" href="/auth/login">
                 Log in with osu! <span aria-hidden="true">↗</span>
             </a>
-            <p class="login-note">Play the daily challenge and track your streak.</p>
+            <p class="login-note">A new set every midnight in Colombia.</p>
         </div>
     </main>
 
@@ -42,9 +43,7 @@
     <header class="topbar">
 
         <div class="topbar-left">
-            <div class="topbar-logo">
-                Catch<span>dle</span>
-            </div>
+            <time id="editionDate" class="edition-date"></time>
 
             <button
                 id="creditsButton"
@@ -52,8 +51,8 @@
                 type="button"
                 title="Credits"
             >
-                <span class="credits-icon">✦</span>
-                <span>CREDITS</span>
+
+                <span>Credits</span>
             </button>
         </div>
 
@@ -62,6 +61,8 @@
             id="userArea"
             class="user-area"
         >
+
+            <select class="language-select" aria-label="Language"></select>
 
             <!-- LOGGED USER -->
 
@@ -95,7 +96,7 @@
                     class="logout-button"
                     href="/auth/logout"
                 >
-                    LOGOUT
+                    Log out
                 </a>
 
             </div>
@@ -138,7 +139,7 @@
                 <a href="?mode=audio" id="audioMode">Audio</a>
             </nav>
             <p class="subtitle">
-                Guess the daily osu!catch beatmapset
+                Guess the daily osu!catch beatmapset.
             </p>
 
         </section>
@@ -171,7 +172,7 @@
                 id="mapInput"
                 aria-label="Search artist, mapper or beatmap"
                 autocomplete="off"
-                placeholder="Search artist, mapper or beatmap..."
+                placeholder="Search artist, mapper or beatmap"
             >
 
 
@@ -185,7 +186,7 @@
                 id="guessButton"
                 disabled
             >
-                GUESS
+                Guess
             </button>
 
 
@@ -203,7 +204,7 @@
                 0
             </span>
 
-            / <span id="attemptLimit">10</span> ATTEMPTS
+            / <span id="attemptLimit">10</span> Attempts
 
         </div>
 
@@ -239,22 +240,22 @@
 
 
                         <div>
-                            BEATMAP
+                            Beatmap
                         </div>
 
 
                         <div>
-                            ARTIST
+                            Artist
                         </div>
 
 
                         <div>
-                            MAPPER
+                            Mapper
                         </div>
 
 
                         <div>
-                            STARS
+                            Stars
                         </div>
 
 
@@ -264,7 +265,7 @@
 
 
                         <div>
-                            LENGTH
+                            Length
                         </div>
 
 
@@ -302,7 +303,7 @@
 
 
             <div class="section-title">
-                AVAILABLE CLUES
+                Clues
             </div>
 
 
@@ -348,7 +349,7 @@
 
                     <span class="clue-symbol" aria-hidden="true">★</span>
                     <span class="clue-name">
-                        DIFFICULTY
+                        Difficulty
                     </span>
 
 
@@ -375,7 +376,7 @@
 
                     <span class="clue-symbol" aria-hidden="true">▧</span>
                     <span class="clue-name">
-                        BACKGROUND
+                        Background
                     </span>
 
 
@@ -411,7 +412,7 @@
                 >
 
                     <div class="revealed-clue-title">
-                        MAP STATS
+                        Map stats
                     </div>
 
 
@@ -484,7 +485,7 @@
                 >
 
                     <div class="revealed-clue-title">
-                        DIFFICULTY
+                        Difficulty
                     </div>
 
 
@@ -507,7 +508,7 @@
                 >
 
                     <div class="revealed-clue-title">
-                        MAP BACKGROUND
+                        Map background
                     </div>
 
 
@@ -535,63 +536,9 @@
             <summary>How to play</summary>
 
 
-            <p>
-
-                Guess the daily osu!catch beatmapset in
-                <strong>10 attempts.</strong>
-
-            </p>
-
-
-            <p>
-
-                Choose a beatmapset and compare its information with
-                today's answer. The colors and arrows show how close
-                your guess is.
-
-            </p>
-
-
-            <div class="clue-explanation">
-
-                <h3>
-                    Clues
-                </h3>
-
-
-                <p>
-
-                    <strong>After 4 attempts:</strong>
-                    CS, AR, OD and HP can be revealed.
-
-                </p>
-
-
-                <p>
-
-                    <strong>After 7 attempts:</strong>
-                    the difficulty name can be revealed.
-
-                </p>
-
-
-                <p>
-
-                    <strong>After 9 attempts:</strong>
-                    the map background can be revealed.
-
-                </p>
-
-            </div>
-
-
-            <p class="highest-rated">
-
-                Only the highest-rated osu!catch difficulty from each
-                beatmapset is used.
-
-            </p>
-
+            <p>Pick a set. Compare the artist, mapper, stars, BPM and length with the daily answer.</p>
+            <p>Arrows point toward the answer. Each set uses its hardest catch difficulty.</p>
+            <p>After 4 guesses you can see the map stats, after 7 the difficulty name, and after 9 the background.</p>
         </details>
 
 
@@ -614,13 +561,11 @@
 
 
                 <div class="win-title">
-                    🎉 Correct!
+                    Got it!
                 </div>
 
 
-                <div class="win-subtitle">
-                    You found today's Catchdle!
-                </div>
+
 
 
                 <img
@@ -646,17 +591,7 @@
                 </p>
 
 
-                <div class="win-attempts">
-
-                    Solved in
-
-                    <strong id="winAttempts">
-                        -
-                    </strong>
-
-                    attempts.
-
-                </div>
+                <div class="win-attempts"></div>
 
 
 
@@ -674,7 +609,7 @@
                         target="_blank"
                         rel="noopener noreferrer"
                     >
-                        OPEN BEATMAP
+                        Open beatmap
                     </a>
 
 
@@ -683,7 +618,7 @@
                         class="leaderboard-button"
                         type="button"
                     >
-                        🏆 LEADERBOARD
+                        Leaderboard
                     </button>
 
 
@@ -787,27 +722,27 @@
 
 
                                 <th>
-                                    PLAYER
+                                    Player
                                 </th>
 
 
                                 <th>
-                                    POINTS
+                                    Points
                                 </th>
 
 
                                 <th>
-                                    WINS
+                                    Wins
                                 </th>
 
 
                                 <th>
-                                    GAMES
+                                    Games
                                 </th>
 
 
                                 <th>
-                                    WIN RATE
+                                    Win rate
                                 </th>
 
 
@@ -850,7 +785,7 @@
                     class="leaderboard-close-button"
                     type="button"
                 >
-                    CLOSE
+                    Dismiss
                 </button>
 
 
@@ -914,42 +849,42 @@
                 <div class="stats-grid-modal">
 
                     <div class="profile-stat">
-                        <span>POINTS</span>
+                        <span>Points</span>
                         <strong id="statPoints">0</strong>
                     </div>
 
                     <div class="profile-stat">
-                        <span>WINS</span>
+                        <span>Wins</span>
                         <strong id="statWins">0</strong>
                     </div>
 
                     <div class="profile-stat">
-                        <span>GAMES</span>
+                        <span>Games</span>
                         <strong id="statGames">0</strong>
                     </div>
 
                     <div class="profile-stat">
-                        <span>WIN RATE</span>
+                        <span>Win rate</span>
                         <strong id="statWinRate">0.0%</strong>
                     </div>
 
                     <div class="profile-stat">
-                        <span>AVG. ATTEMPTS</span>
+                        <span>Avg. attempts</span>
                         <strong id="statAverageAttempts">0.00</strong>
                     </div>
 
                     <div class="profile-stat">
-                        <span>LOSSES</span>
+                        <span>Losses</span>
                         <strong id="statLosses">0</strong>
                     </div>
 
                     <div class="profile-stat streak-stat">
-                        <span>CURRENT STREAK</span>
+                        <span>Current streak</span>
                         <strong id="statCurrentStreak">0</strong>
                     </div>
 
                     <div class="profile-stat streak-stat">
-                        <span>BEST STREAK</span>
+                        <span>Best streak</span>
                         <strong id="statBestStreak">0</strong>
                     </div>
 
@@ -965,7 +900,7 @@
                     class="stats-close-button"
                     type="button"
                 >
-                    CLOSE
+                    Dismiss
                 </button>
 
             </div>
@@ -1073,14 +1008,14 @@
 
                 </div>
 
-                <p class="credits-note">Made with ♥ for the osu!catch community.</p>
+
 
                 <button
                     id="closeCreditsBottom"
                     class="stats-close-button"
                     type="button"
                 >
-                    CLOSE
+                    Dismiss
                 </button>
 
             </div>
@@ -1093,13 +1028,7 @@
 
         <footer class="footer">
 
-            Made with
-
-            <span>
-                ♥
-            </span>
-
-            for the osu!catch community
+            Catchdle · osu!catch
 
         </footer>
 
@@ -1112,7 +1041,8 @@
          JAVASCRIPT
     ========================================== -->
 
-    <script src="script.js?v=mode-ranking-1"></script>
+    <script src="languages.js?v=1"></script>
+    <script src="script.js?v=languages-1"></script>
 
 
 </body>

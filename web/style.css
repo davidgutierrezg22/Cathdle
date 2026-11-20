@@ -3256,3 +3256,21 @@ body:not(.at-login) > .login-screen {
 
 .ranking-profile { padding: 3px 0; border: 0; background: transparent; color: inherit; font: inherit; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
 .ranking-profile:focus-visible { outline: 2px solid #ffa8cf; }
+/* The language picker stays in the same corner before and after sign-in. */
+.login-language { position:absolute; top:20px; right:clamp(16px,4vw,60px); }
+.language-select { max-width:9rem; padding:7px 5px; font:inherit; font-size:.83rem; color:#eee4e9; background:#191b24; border:1px solid #655862; border-radius:4px; cursor:pointer; }
+.login-language .language-select { color:#231f1c; background:#f5eddf; border-color:#ad9e8c; }
+.language-select:focus-visible { outline:2px solid #c76290; outline-offset:3px; }
+.edition-date { font-family:monospace; font-size:.8rem; letter-spacing:.03em; color:#d6c8ce; }
+.hero .game-modes { gap:0; width:fit-content; border-bottom:1px solid #73636d; }
+.hero .game-modes a { padding:9px 13px; border:0; border-bottom:3px solid transparent; border-radius:0; background:transparent; font-weight:600; color:#e3d7df; }
+.hero .game-modes a[aria-current="page"] { border-color:#ff80b8; color:white; }
+.hero .game-modes a:hover { background:#30262f; }
+.container .win-card { border-radius:8px; box-shadow:none; border-top:3px solid #ff80b8; }
+.clues-section .clue-button { border-radius:5px; }
+@media (max-width:600px) {
+    .topbar { height:auto; min-height:54px; flex-wrap:wrap; gap:6px; padding:8px 12px; }
+    .topbar-left,.user-area { flex-wrap:wrap; }
+    .edition-date { font-size:.73rem; }
+    .language-select { max-width:7rem; }
+}

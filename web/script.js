@@ -3,7 +3,7 @@ const backgroundMode = requestedMode === "background";
 const audioMode = requestedMode === "audio";
 const mediaMode = audioMode || backgroundMode;
 const activeMode = mediaMode ? requestedMode : "classic";
-const modeLabel = audioMode ? "Audio" : backgroundMode ? "Background" : "Classic";
+const modeLabel = tr(audioMode ? "Audio" : backgroundMode ? "Background" : "Classic");
 const modePath = mediaMode ? "/api/" + requestedMode : "/api";
 const GAME_URL = modePath + "/game";
 const SEARCH_URL = "/api/search";
@@ -227,24 +227,24 @@ function renderAttempt(attempt) {
     mapInfo.className = "attempt-map-info";
     const title = document.createElement("div");
     title.className = "attempt-title";
-    title.textContent = map.title || "Unknown";
+    title.textContent = map.title || tr("Unknown");
     const mapper = document.createElement("div");
     mapper.className = "attempt-map-mapper";
-    mapper.textContent = map.mapper || "Unknown";
+    mapper.textContent = map.mapper || tr("Unknown");
     mapInfo.append(title, mapper);
     mapCell.append(image, mapInfo);
     row.appendChild(mapCell);
 
     if (mediaMode) {
         const matched = audioMode ? attempt.correct : map.beatmapset_id === secretMap?.beatmapset_id;
-        row.appendChild(createCell(matched ? "Correct" : "Incorrect", matched ? "correct" : "wrong"));
+        row.appendChild(createCell(tr(matched ? "Correct" : "Incorrect"), matched ? "correct" : "wrong"));
         attemptsContainer.prepend(row);
         return;
     }
     row.appendChild(createCell(map.artist || "-", comparison.artist || "wrong"));
     row.appendChild(createCell(map.mapper || "-", comparison.mapper || "wrong"));
-    row.appendChild(createCell(Number(map.stars || 0).toFixed(2), comparison.stars?.status || "wrong", comparison.stars?.arrow || ""));
-    row.appendChild(createCell(Number(map.bpm || 0).toFixed(2), comparison.bpm?.status || "wrong", comparison.bpm?.arrow || ""));
+    row.appendChild(createCell(twoDecimals.format(map.stars || 0), comparison.stars?.status || "wrong", comparison.stars?.arrow || ""));
+    row.appendChild(createCell(twoDecimals.format(map.bpm || 0), comparison.bpm?.status || "wrong", comparison.bpm?.arrow || ""));
     row.appendChild(createCell(formatDuration(map.duration), comparison.length?.status || "wrong", comparison.length?.arrow || ""));
     attemptsContainer.prepend(row);
 }
@@ -312,8 +312,8 @@ function updateClueButtons() {
         button.classList.toggle("available", available);
         button.setAttribute("aria-expanded", String(expanded));
         document.getElementById(id + "Status").textContent = available
-            ? (expanded ? "Hide clue" : "Show clue")
-            : `🔒 ${threshold} attempts`;
+            ? tr(expanded ? "Hide clue" : "Show clue")
+            : tr("After {n} guesses", {n: threshold});
     }
 }
 
@@ -321,12 +321,12 @@ function applyServerClues(clueData = {}, clues = {}) {
     if (clues.stats) {
         [["clueCS", clueData.cs], ["clueAR", clueData.ar], ["clueOD", clueData.od], ["clueHP", clueData.hp]].forEach(([id, value]) => {
             const el = document.getElementById(id);
-            if (el && value !== undefined) el.textContent = Number(value).toFixed(2);
+            if (el && value !== undefined) el.textContent = twoDecimals.format(value);
         });
     }
     if (clues.difficulty && clueData.difficulty_name !== undefined) {
         const el = document.getElementById("clueDifficultyValue");
-        if (el) el.textContent = clueData.difficulty_name || "Unknown";
+        if (el) el.textContent = clueData.difficulty_name || tr("Unknown");
     }
     if (clues.background && clueData.background_url) {
         const el = document.getElementById("clueBackgroundImage");
@@ -516,7 +516,7 @@ async function loadCurrentUser() {
         avatar.src = fallbackAvatar;
     };
     avatar.src = currentUser.avatar_url || fallbackAvatar;
-    avatar.alt = currentUser.username || "Avatar";
+    avatar.alt = currentUser.username || tr("Avatar");
     document.getElementById("username").textContent = currentUser.username || "User";
     document.getElementById("loggedUser").classList.remove("hidden");
     document.body.classList.remove("at-login");
@@ -545,7 +545,7 @@ async function loadLeaderboard() {
                 colspan="${mediaMode ? 5 : 6}"
                 class="leaderboard-loading"
             >
-                Loading leaderboard...
+                ${tr("Loading leaderboard...")}
             </td>
         </tr>
     `;
@@ -601,7 +601,7 @@ async function loadLeaderboard() {
                         colspan="${mediaMode ? 5 : 6}"
                         class="leaderboard-empty"
                     >
-                        No players yet.
+                        ${tr("No players yet.")}
                     </td>
                 </tr>
             `;
@@ -727,7 +727,7 @@ async function loadLeaderboard() {
                                 </td>
 
                                 <td>
-                                    ${winRate.toFixed(1)}%
+                                    ${percent.format(winRate / 100)}
                                 </td>
 
                             </tr>
@@ -752,7 +752,7 @@ async function loadLeaderboard() {
                     colspan="${mediaMode ? 5 : 6}"
                     class="leaderboard-error"
                 >
-                    Could not load leaderboard.
+                    ${tr("Could not load leaderboard.")}
                 </td>
             </tr>
         `;
@@ -777,7 +777,7 @@ function openLeaderboard() {
     }
 
 
-    modal.querySelector("h2").textContent = modeLabel + " Leaderboard";
+    modal.querySelector("h2").textContent = tr("{mode} leaderboard", {mode: modeLabel});
     modal.querySelector("th:nth-child(3)").classList.toggle("hidden", mediaMode);
     modal.classList.remove(
         "hidden"
@@ -987,24 +987,14 @@ async function loadStats() {
 
         if (statWinRate) {
 
-            statWinRate.textContent =
-                `${(
-                    Number(
-                        stats.win_rate
-                    ) || 0
-                ).toFixed(1)}%`;
+            statWinRate.textContent = percent.format((Number(stats.win_rate) || 0) / 100);
 
         }
 
 
         if (statAverageAttempts) {
 
-            statAverageAttempts.textContent =
-                (
-                    Number(
-                        stats.average_attempts
-                    ) || 0
-                ).toFixed(2);
+            statAverageAttempts.textContent = twoDecimals.format(Number(stats.average_attempts) || 0);
 
         }
 
@@ -1058,7 +1048,7 @@ async function loadStats() {
         if (statsMessage) {
 
             statsMessage.textContent =
-                "Could not load statistics.";
+                tr("Could not load statistics.");
 
         }
 
@@ -1084,7 +1074,7 @@ async function openStats() {
     }
 
 
-    document.getElementById("statsTitle").textContent = modeLabel + " statistics";
+    document.getElementById("statsTitle").textContent = tr("{mode} statistics", {mode: modeLabel});
     document.getElementById("statPoints").parentElement.classList.toggle("hidden", mediaMode);
     modal.classList.remove(
         "hidden"
@@ -1200,7 +1190,9 @@ function updateAttemptCounter() {
 
 function showMessage(text, type = "normal") {
     if (!message) return;
-    message.textContent = String(text ?? "");
+    const key = String(text ?? "");
+    const fallback = /new daily|new song/i.test(key) ? "A new challenge is ready. Refresh to play." : "Try again in a moment.";
+    message.textContent = tr(dictionary.has(key) ? key : fallback);
     message.className = "message";
     if (type) message.classList.add(type);
     message.classList.remove("hidden");
@@ -1232,17 +1224,15 @@ function showWinScreen() {
     const title = document.getElementById("winMapTitle");
     const artist = document.getElementById("winArtist");
     const mapper = document.getElementById("winMapper");
-    const attempts = document.getElementById("winAttempts");
     const osuLink = document.getElementById("winOsuLink");
 
     if (cover) {
         cover.src = getCover(answer);
-        cover.alt = answer.title || "Beatmap cover";
+        cover.alt = answer.title || tr("Beatmap cover");
     }
     if (title) title.textContent = answer.title || "-";
     if (artist) artist.textContent = answer.artist || "-";
-    if (mapper) mapper.textContent = `Mapped by ${answer.mapper || "-"}`;
-    if (attempts) attempts.textContent = String(gameState?.attempts?.length || 0);
+    if (mapper) mapper.textContent = tr("Mapped by {mapper}", {mapper: answer.mapper || "-"});
     if (osuLink) {
         osuLink.href = answer.url || (answer.beatmapset_id
             ? `https://osu.ppy.sh/beatmapsets/${answer.beatmapset_id}`
@@ -1250,11 +1240,9 @@ function showWinScreen() {
     }
 
     const heading = screen.querySelector(".win-title");
-    const subtitle = screen.querySelector(".win-subtitle");
     const attemptsText = screen.querySelector(".win-attempts");
-    if (heading) heading.textContent = "🎉 Correct!";
-    if (subtitle) subtitle.textContent = "You found today's Catchdle!";
-    if (attemptsText) attemptsText.innerHTML = `Solved in <strong>${gameState?.attempts?.length || 0}</strong> attempts.`;
+    if (heading) heading.textContent = tr("Got it!");
+    if (attemptsText) attemptsText.textContent = tr("Solved on guess {n}.", {n: gameState.attempts.length});
 
     screen.classList.remove("hidden");
     startCountdown();
@@ -1270,17 +1258,15 @@ function showLoseScreen() {
     const title = document.getElementById("winMapTitle");
     const artist = document.getElementById("winArtist");
     const mapper = document.getElementById("winMapper");
-    const attempts = document.getElementById("winAttempts");
     const osuLink = document.getElementById("winOsuLink");
 
     if (cover) {
         cover.src = getCover(answer);
-        cover.alt = answer.title || "Beatmap cover";
+        cover.alt = answer.title || tr("Beatmap cover");
     }
     if (title) title.textContent = answer.title || "-";
     if (artist) artist.textContent = answer.artist || "-";
-    if (mapper) mapper.textContent = `Mapped by ${answer.mapper || "-"}`;
-    if (attempts) attempts.textContent = String(gameState?.attempts?.length || 0);
+    if (mapper) mapper.textContent = tr("Mapped by {mapper}", {mapper: answer.mapper || "-"});
     if (osuLink) {
         osuLink.href = answer.url || (answer.beatmapset_id
             ? `https://osu.ppy.sh/beatmapsets/${answer.beatmapset_id}`
@@ -1288,11 +1274,9 @@ function showLoseScreen() {
     }
 
     const heading = screen.querySelector(".win-title");
-    const subtitle = screen.querySelector(".win-subtitle");
     const attemptsText = screen.querySelector(".win-attempts");
-    if (heading) heading.textContent = "💀 Better luck tomorrow!";
-    if (subtitle) subtitle.textContent = "You ran out of attempts.";
-    if (attemptsText) attemptsText.innerHTML = `The answer was <strong>${escapeHTML(answer.title || "Unknown")}</strong>.`;
+    if (heading) heading.textContent = tr("Out of guesses");
+    if (attemptsText) attemptsText.textContent = tr("The answer was {title}.", {title: answer.title || tr("Unknown")});
 
     screen.classList.remove("hidden");
     startCountdown();
@@ -1607,7 +1591,7 @@ function applyGameState(data) {
     secretMap = data.answer || null;
     if (audioMode && data.audio) {
         const player = document.getElementById("songPlayer");
-        document.getElementById("clipLength").textContent = data.seconds + (data.seconds === 1 ? " second" : " seconds");
+        document.getElementById("clipLength").textContent = tr("{n} s", {n: data.seconds});
         if (player.getAttribute("src") !== data.audio) player.src = data.audio;
     }
     if (backgroundMode && data.image) {
@@ -1643,7 +1627,7 @@ async function init() {
         document.getElementById(mediaMode ? requestedMode + "Mode" : "classicMode").setAttribute("aria-current", "page");
         if (mediaMode) document.body.classList.add("media-mode");
         if (audioMode) {
-            document.querySelector(".hero .subtitle").textContent = "Which song is playing?";
+            document.querySelector(".hero .subtitle").textContent = tr("Which song is playing?");
             document.getElementById("audioPuzzle").hidden = false;
             document.getElementById("attemptLimit").textContent = MAX_ATTEMPTS;
             const player = document.getElementById("songPlayer");
@@ -1653,7 +1637,7 @@ async function init() {
             retry.onclick = () => { if (player.getAttribute("src")) player.load(); else refreshGameState().catch(error => showMessage(error.message, "error")); };
         }
         if (backgroundMode) {
-            document.querySelector(".hero .subtitle").textContent = "Which beatmapset is this background from?";
+            document.querySelector(".hero .subtitle").textContent = tr("Which beatmapset is this background from?");
             document.getElementById("bgPuzzle").hidden = false;
             const image = document.getElementById("bgCrop");
             const retry = document.getElementById("retryCrop");
@@ -1661,6 +1645,7 @@ async function init() {
             image.onload = () => { retry.hidden = true; };
             retry.onclick = () => { image.src = image.src; };
         }
+        document.getElementById("editionDate").textContent = new Intl.DateTimeFormat(locale, {day:"numeric", month:"short", year:"numeric", timeZone:"America/Bogota"}).format(new Date());
         await loadCurrentUser();
         if (!currentUser) {
             await loadLoginCovers();
@@ -1672,7 +1657,7 @@ async function init() {
         if (audioMode && currentUser) document.getElementById("retryAudio").hidden = false;
         console.error("Error initializing Catchdle:", error);
         if (document.body.classList.contains("at-login")) {
-            document.querySelector(".login-note").textContent = "Couldn’t check your session. Refresh to try again.";
+            document.querySelector(".login-note").textContent = tr("Refresh to check your session.");
         } else {
             showMessage(error.message || "Could not load Catchdle. Check the server.", "error");
         }
