@@ -281,268 +281,45 @@ function renderHistory() {
    CLUE BUTTONS
    ========================================================= */
 
+const clueButtons = [
+    { key: "stats", id: "clueStats", threshold: CLUE_STATS_ATTEMPT },
+    { key: "difficulty", id: "clueDifficulty", threshold: CLUE_DIFFICULTY_ATTEMPT },
+    { key: "background", id: "clueBackground", threshold: CLUE_BACKGROUND_ATTEMPT }
+];
+
 function updateClueButtons() {
-
-    if (!gameState) {
-        return;
+    for (const { key, id, threshold } of clueButtons) {
+        const button = document.getElementById(id);
+        const panel = document.getElementById(button.getAttribute("aria-controls"));
+        const available = Boolean(gameState?.clues?.[key]);
+        if (!available) panel.classList.add("hidden");
+        const expanded = !panel.classList.contains("hidden");
+        button.disabled = !available;
+        button.classList.toggle("locked", !available);
+        button.classList.toggle("available", available);
+        button.setAttribute("aria-expanded", String(expanded));
+        document.getElementById(id + "Status").textContent = available
+            ? (expanded ? "Hide clue" : "Show clue")
+            : `🔒 ${threshold} attempts`;
     }
-
-
-    const attempts =
-        Array.isArray(
-            gameState.attempts
-        )
-            ? gameState.attempts.length
-            : 0;
-
-
-    const statsButton =
-        document.getElementById(
-            "clueStats"
-        );
-
-    const statsStatus =
-        document.getElementById(
-            "clueStatsStatus"
-        );
-
-
-    if (statsButton) {
-
-        if (
-            attempts >=
-            CLUE_STATS_ATTEMPT
-        ) {
-
-            statsButton.disabled =
-                gameState.clues.stats;
-
-            statsButton.classList.remove(
-                "locked"
-            );
-
-            statsButton.classList.toggle(
-                "available",
-                !gameState.clues.stats
-            );
-
-            statsButton.classList.toggle(
-                "revealed",
-                gameState.clues.stats
-            );
-
-            if (statsStatus) {
-
-                statsStatus.textContent =
-                    gameState.clues.stats
-                        ? "✓ REVEALED"
-                        : "AVAILABLE";
-
-            }
-
-        } else {
-
-            statsButton.disabled =
-                true;
-
-            statsButton.classList.add(
-                "locked"
-            );
-
-            statsButton.classList.remove(
-                "available"
-            );
-
-            if (statsStatus) {
-
-                statsStatus.textContent =
-                    `🔒 ${CLUE_STATS_ATTEMPT} ATTEMPTS`;
-
-            }
-
-        }
-
-    }
-
-
-    const difficultyButton =
-        document.getElementById(
-            "clueDifficulty"
-        );
-
-    const difficultyStatus =
-        document.getElementById(
-            "clueDifficultyStatus"
-        );
-
-
-    if (difficultyButton) {
-
-        if (
-            attempts >=
-            CLUE_DIFFICULTY_ATTEMPT
-        ) {
-
-            difficultyButton.disabled =
-                gameState.clues.difficulty;
-
-            difficultyButton.classList.remove(
-                "locked"
-            );
-
-            difficultyButton.classList.toggle(
-                "available",
-                !gameState.clues.difficulty
-            );
-
-            difficultyButton.classList.toggle(
-                "revealed",
-                gameState.clues.difficulty
-            );
-
-            if (difficultyStatus) {
-
-                difficultyStatus.textContent =
-                    gameState.clues.difficulty
-                        ? "✓ REVEALED"
-                        : "AVAILABLE";
-
-            }
-
-        } else {
-
-            difficultyButton.disabled =
-                true;
-
-            difficultyButton.classList.add(
-                "locked"
-            );
-
-            difficultyButton.classList.remove(
-                "available"
-            );
-
-            if (difficultyStatus) {
-
-                difficultyStatus.textContent =
-                    `🔒 ${CLUE_DIFFICULTY_ATTEMPT} ATTEMPTS`;
-
-            }
-
-        }
-
-    }
-
-
-    const backgroundButton =
-        document.getElementById(
-            "clueBackground"
-        );
-
-    const backgroundStatus =
-        document.getElementById(
-            "clueBackgroundStatus"
-        );
-
-
-    if (backgroundButton) {
-
-        if (
-            attempts >=
-            CLUE_BACKGROUND_ATTEMPT
-        ) {
-
-            backgroundButton.disabled =
-                gameState.clues.background;
-
-            backgroundButton.classList.remove(
-                "locked"
-            );
-
-            backgroundButton.classList.toggle(
-                "available",
-                !gameState.clues.background
-            );
-
-            backgroundButton.classList.toggle(
-                "revealed",
-                gameState.clues.background
-            );
-
-            if (backgroundStatus) {
-
-                backgroundStatus.textContent =
-                    gameState.clues.background
-                        ? "✓ REVEALED"
-                        : "AVAILABLE";
-
-            }
-
-        } else {
-
-            backgroundButton.disabled =
-                true;
-
-            backgroundButton.classList.add(
-                "locked"
-            );
-
-            backgroundButton.classList.remove(
-                "available"
-            );
-
-            if (backgroundStatus) {
-
-                backgroundStatus.textContent =
-                    `🔒 ${CLUE_BACKGROUND_ATTEMPT} ATTEMPTS`;
-
-            }
-
-        }
-
-    }
-
 }
 
-
-/* =========================================================
-   AUTO REVEAL CLUES
-   ========================================================= */
-
 function applyServerClues(clueData = {}, clues = {}) {
-    const stats = document.getElementById("statsClue");
-    const difficulty = document.getElementById("difficultyClue");
-    const background = document.getElementById("backgroundClue");
     if (clues.stats) {
         [["clueCS", clueData.cs], ["clueAR", clueData.ar], ["clueOD", clueData.od], ["clueHP", clueData.hp]].forEach(([id, value]) => {
             const el = document.getElementById(id);
             if (el && value !== undefined) el.textContent = Number(value).toFixed(2);
         });
-        stats?.classList.remove("hidden");
     }
     if (clues.difficulty && clueData.difficulty_name !== undefined) {
         const el = document.getElementById("clueDifficultyValue");
         if (el) el.textContent = clueData.difficulty_name || "Unknown";
-        difficulty?.classList.remove("hidden");
     }
     if (clues.background && clueData.background_url) {
         const el = document.getElementById("clueBackgroundImage");
         if (el) el.src = clueData.background_url;
-        background?.classList.remove("hidden");
     }
 }
-
-function restoreClues() {
-    if (gameState) updateClueButtons();
-}
-
-function autoRevealClues() {
-    if (gameState) updateClueButtons();
-}
-
-async function revealStats() { await refreshGameState(); }
-async function revealDifficulty() { await refreshGameState(); }
-async function revealBackground() { await refreshGameState(); }
 
 /* =========================================================
    SEARCH MAPS
@@ -1446,7 +1223,6 @@ function updateAttemptCounter() {
         ? gameState.attempts.length
         : 0;
     if (attemptCount) attemptCount.textContent = current;
-    autoRevealClues();
 }
 
 function showMessage(text, type = "normal") {
@@ -1730,53 +1506,14 @@ document.addEventListener(
    CLUE EVENTS
    ========================================================= */
 
-const statsClueButton =
-    document.getElementById(
-        "clueStats"
-    );
-
-
-const difficultyClueButton =
-    document.getElementById(
-        "clueDifficulty"
-    );
-
-
-const backgroundClueButton =
-    document.getElementById(
-        "clueBackground"
-    );
-
-
-if (statsClueButton) {
-
-    statsClueButton.addEventListener(
-        "click",
-        revealStats
-    );
-
+for (const { id } of clueButtons) {
+    const button = document.getElementById(id);
+    button.addEventListener("click", () => {
+        if (button.disabled) return;
+        document.getElementById(button.getAttribute("aria-controls")).classList.toggle("hidden");
+        updateClueButtons();
+    });
 }
-
-
-if (difficultyClueButton) {
-
-    difficultyClueButton.addEventListener(
-        "click",
-        revealDifficulty
-    );
-
-}
-
-
-if (backgroundClueButton) {
-
-    backgroundClueButton.addEventListener(
-        "click",
-        revealBackground
-    );
-
-}
-
 
 /* =========================================================
    LEADERBOARD EVENTS

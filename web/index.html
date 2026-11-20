@@ -265,14 +265,15 @@
 
         </section>
 
-        <section class="board-key" aria-label="Color indicators">
+        <details class="board-key" open>
+            <summary>Color indicators <span class="key-toggle" aria-hidden="true"></span></summary>
             <div class="legend">
                 <span class="legend-item"><b class="legend-icon correct-icon" aria-hidden="true">✓</b> Correct</span>
                 <span class="legend-item"><b class="legend-icon close-icon" aria-hidden="true">≈</b> Close</span>
                 <span class="legend-item"><b class="legend-icon wrong-icon" aria-hidden="true">×</b> Incorrect</span>
                 <span class="legend-item"><b class="legend-icon arrow-icon" aria-hidden="true">↑↓</b> Higher / lower</span>
             </div>
-        </section>
+        </details>
 
         <!-- =====================================
              CLUES
@@ -294,9 +295,12 @@
                 <button
                     id="clueStats"
                     class="clue-button locked"
+                    aria-controls="statsClue"
+                    aria-expanded="false"
                     disabled
                 >
 
+                    <span class="clue-symbol" aria-hidden="true">≋</span>
                     <span class="clue-name">
                         CS / AR / OD / HP
                     </span>
@@ -318,9 +322,12 @@
                 <button
                     id="clueDifficulty"
                     class="clue-button locked"
+                    aria-controls="difficultyClue"
+                    aria-expanded="false"
                     disabled
                 >
 
+                    <span class="clue-symbol" aria-hidden="true">★</span>
                     <span class="clue-name">
                         DIFFICULTY
                     </span>
@@ -342,9 +349,12 @@
                 <button
                     id="clueBackground"
                     class="clue-button locked"
+                    aria-controls="backgroundClue"
+                    aria-expanded="false"
                     disabled
                 >
 
+                    <span class="clue-symbol" aria-hidden="true">▧</span>
                     <span class="clue-name">
                         BACKGROUND
                     </span>
