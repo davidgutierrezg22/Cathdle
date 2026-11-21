@@ -5,6 +5,7 @@ import json
 import hashlib
 import logging
 import random
+import unicodedata
 from datetime import datetime
 from zoneinfo import ZoneInfo
 from pathlib import Path
@@ -18,7 +19,7 @@ from fastapi.staticfiles import StaticFiles
 
 from contextlib import closing
 from fastapi import HTTPException, Response
-from server.audio_clip import STAGES, fetch_preview, wav_clip
+from server.audio_clip import SAMPLE_RATE, STAGES, fetch_preview, wav_clip
 from threading import Lock
 from starlette.concurrency import run_in_threadpool
 from server.background_image import render_background
@@ -1293,11 +1294,16 @@ def public_map(map_data):
 
 
 def normalize_server(value):
-    import unicodedata
     return "".join(
         c for c in unicodedata.normalize("NFD", str(value or "").lower())
         if unicodedata.category(c) != "Mn"
     ).strip()
+
+
+SEARCH_TEXT = [
+    " ".join(normalize_server(item.get(field)) for field in ("title", "artist", "mapper"))
+    for item in BEATMAPS
+]
 
 
 def comparison_text(guess, answer):
@@ -1346,12 +1352,7 @@ async def search_maps_api(request: Request):
         return {"success": True, "results": []}
 
     results = []
-    for item in BEATMAPS:
-        haystack = " ".join((
-            normalize_server(item.get("title")),
-            normalize_server(item.get("artist")),
-            normalize_server(item.get("mapper")),
-        ))
+    for item, haystack in zip(BEATMAPS, SEARCH_TEXT):
         if query in haystack:
             results.append(search_map(item))
             if len(results) >= 8:
@@ -1534,7 +1535,10 @@ def audio_clip(request: Request):
     with closing(get_connection()) as conn:
         answer = daily_song(conn, day)
         seconds = song_state(answer, day, song_history(conn, user, day))["seconds"]
-        pcm = conn.execute("SELECT pcm FROM audio_maps WHERE date = ?", (day,)).fetchone()["pcm"]
+        pcm = conn.execute(
+            "SELECT substr(pcm, 1, ?) AS pcm FROM audio_maps WHERE date = ?",
+            (seconds * SAMPLE_RATE * 2, day),
+        ).fetchone()["pcm"]
     return Response(wav_clip(pcm, seconds), media_type="audio/wav", headers={"Cache-Control": "private, no-store"})
 
 
