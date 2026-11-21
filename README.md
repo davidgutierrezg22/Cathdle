@@ -1,18 +1,28 @@
 # 🍓 Catchdle
 
-Catchdle is a daily guessing game for osu!catch players, inspired by LoLdle and Pokédle. Everyone gets the same beatmapset and ten guesses to find it. A new round starts at midnight in Colombia (UTC−5).
+How much of a beatmap do you need to recognize it? Catchdle has three daily guessing games for osu!catch players, inspired by LoLdle and Pokédle. Everyone gets the same challenge in each mode. The next round starts at midnight in Colombia (UTC−5).
 
-## How to play
+[Play Catchdle](https://cathdle.onrender.com) with your osu! account. Search for a guess by song title, artist or mapper.
 
-Log in with osu! and pick a set you know. You can search by title, artist or mapper. Each guess shows how its artist, mapper, star rating, BPM and length compare with the mystery set. Green means a match. Yellow means a number is close, and an arrow tells you which way to go.
+## The three modes
 
-Say you get the artist right but see an up arrow next to BPM. Try a faster song by that artist. If two mappers made sets for the same song, it matters which one you pick. For sets with several catch difficulties, the game uses the one with the highest star rating.
+| Mode | Guesses | How it works |
+| --- | ---: | --- |
+| Classic | 10 | Guess the beatmapset. Each guess compares the artist, mapper, stars, BPM and length with the daily map. |
+| Background | 10 | Recognize the map from its background. The first crop starts at 12× zoom. Each miss reveals more of the picture. |
+| Audio | 6 | Name the song from a one-second clip. After each miss you can hear more, up to 2, 4, 6, 8 and finally 10 seconds. Any set with the same artist and title counts. |
 
-If you're stuck, you get CS, AR, OD and HP after four guesses, the difficulty name after seven, and the background after nine. A first-guess win earns 100 points. Each extra guess takes 10 points off a win. Your profile keeps track of wins and streaks, and the leaderboard shows how your points stack up.
+In Classic, green means a match and yellow means you're close. If BPM shows an up arrow, try a faster song. After four guesses you can reveal CS, AR, OD and HP. The difficulty name unlocks after seven guesses and the background after nine.
+
+A first-guess Classic win earns 100 points. Each extra guess takes 10 points off a win. Open your profile to see your wins and streaks in each mode. Each mode also has its own leaderboard.
+
+## Which maps are in the game?
+
+The November 2026 catalog contains 4,047 Ranked and Loved beatmapsets with an osu!catch difficulty. A set with several catch difficulties appears once. Its highest-star catch difficulty supplies the stats and clues. The full list is in [data/beatmaps.json](data/beatmaps.json).
 
 ## Run it locally
 
-The frontend is plain HTML, CSS and JavaScript. FastAPI serves the game and handles osu! login, and SQLite stores guesses and results.
+The project uses Python 3.13 and FastAPI, with plain HTML, CSS and JavaScript on the frontend.
 
 ```sh
 git clone https://github.com/davidgutierrezg22/Cathdle.git
@@ -20,10 +30,10 @@ cd Cathdle
 python -m pip install -r requirements.txt
 ```
 
-Copy `.env.example` to `.env` and fill in `OSU_CLIENT_ID` and `OSU_CLIENT_SECRET` from your osu! OAuth application. Set the application's callback URL to `http://localhost:8000/auth/callback` to match the local configuration.
+Copy `.env.example` to `.env` and fill in `OSU_CLIENT_ID` and `OSU_CLIENT_SECRET` from your osu! OAuth application. Set its callback URL to `http://localhost:8000/auth/callback`.
 
 ```sh
 python -m uvicorn server.app:app --reload
 ```
 
-Open [localhost:8000](http://localhost:8000) and log in with osu! to play.
+Open [localhost:8000](http://localhost:8000) and sign in. Local games use SQLite by default. The live game on Render stores all three modes in one PostgreSQL database on Neon, configured through `DATABASE_URL`. See the [Render setup guide](DEPLOY_RENDER.md) for deployment settings.
