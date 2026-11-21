@@ -12,7 +12,7 @@ How much of a beatmap do you need to recognize it? Catchdle has three daily gues
 | Background | 10 | Recognize the map from its background. The first crop starts at 12× zoom. Each miss reveals more of the picture. |
 | Audio | 6 | Name the song from a one-second clip. After each miss you can hear more, up to 2, 4, 6, 8 and finally 10 seconds. Any set with the same artist and title counts. |
 
-In Classic, green means a match and yellow means you're close. If BPM shows an up arrow, try a faster song. After four guesses you can reveal CS, AR, OD and HP. The difficulty name unlocks after seven guesses and the background after nine.
+In Classic, green means a match and yellow means you're close. If BPM shows an up arrow, try a faster song. After three guesses you can reveal CS, AR, OD and HP. The difficulty name unlocks after five guesses and the background after seven.
 
 A first-guess Classic win earns 100 points. Each extra guess takes 10 points off a win. Open your profile to see your wins and streaks in each mode. Each mode also has its own leaderboard.
 

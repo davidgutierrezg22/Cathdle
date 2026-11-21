@@ -10,9 +10,9 @@ const SEARCH_URL = "/api/search";
 const STORAGE_KEY = mediaMode ? "catchdle_" + requestedMode + "_game" : "catchdle_daily_game";
 const MAX_ATTEMPTS = audioMode ? 6 : 10;
 
-const CLUE_STATS_ATTEMPT = 4;
-const CLUE_DIFFICULTY_ATTEMPT = 7;
-const CLUE_BACKGROUND_ATTEMPT = 9;
+const CLUE_STATS_ATTEMPT = 3;
+const CLUE_DIFFICULTY_ATTEMPT = 5;
+const CLUE_BACKGROUND_ATTEMPT = 7;
 
 const STAR_CLOSE_RANGE = 0.50;
 const BPM_CLOSE_RANGE = 20;
