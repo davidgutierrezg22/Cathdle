@@ -2,6 +2,11 @@ const languages = { en: "English", es: "Español", pt: "Português", fr: "Franç
 
 // English source, followed by Spanish, Portuguese, French and Japanese.
 const copy = [
+    ["Challenge difficulty", "Dificultad del reto", "Dificuldade do desafio", "Difficulté du défi", "チャレンジ難易度"],
+    ["Easy", "Fácil", "Fácil", "Facile", "かんたん"],
+    ["Medium", "Medio", "Médio", "Moyen", "ふつう"],
+    ["Hard", "Difícil", "Difícil", "Difficile", "むずかしい"],
+
     ["Guess summary", "Resumen de intentos", "Resumo dos palpites", "Résumé des essais", "回答のまとめ"],
     ["Guess {n}/{max}", "Intento {n}/{max}", "Tentativa {n}/{max}", "Essai {n}/{max}", "{n}/{max} 回目"],
     ["Audio controls","Controles de audio","Controles de áudio","Commandes audio","音声コントロール"],

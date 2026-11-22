@@ -3314,3 +3314,6 @@ body:not(.media-mode) #attemptCount { color: #ffda70; }
 @media (max-width: 680px) {
     #summaryValues { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
+
+#mediaLevel:not([hidden]) { display: inline-flex; align-items: center; gap: 8px; margin-top: 12px; font-size: 14px; }
+#difficultySelect { font: inherit; color: #f5eef3; background: #191b26; border: 1px solid #73636d; border-radius: 6px; padding: 5px 8px; }

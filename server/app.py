@@ -20,6 +20,7 @@ from fastapi.staticfiles import StaticFiles
 from contextlib import closing
 from fastapi import HTTPException, Response
 from server.audio_clip import SAMPLE_RATE, STAGES, fetch_preview, wav_clip
+from typing import Literal
 from threading import Lock
 from starlette.concurrency import run_in_threadpool
 from server.background_image import render_background
@@ -140,6 +141,15 @@ def archive_map(conn, item):
     )
 
 
+Difficulty = Literal["easy", "medium", "hard"]
+LEVELS = ("easy", "medium", "hard")
+
+
+def media_round_key(day, difficulty):
+    # Existing rounds use the bare ISO date; keep their answers and guesses on Medium.
+    return day if difficulty == "medium" else f"{day}:{difficulty}"
+
+
 def _load_beatmaps():
     try:
         with BEATMAPS_FILE.open("r", encoding="utf-8") as file:
@@ -177,11 +187,11 @@ def _load_beatmaps():
         referenced_ids = conn.execute(
             """SELECT beatmapset_id FROM daily_maps WHERE date = ?
                UNION SELECT beatmapset_id FROM daily_guesses WHERE date = ?
-               UNION SELECT beatmapset_id FROM background_maps WHERE date = ?
-               UNION SELECT beatmapset_id FROM background_guesses WHERE date = ?
-               UNION SELECT beatmapset_id FROM audio_maps WHERE date = ?
-               UNION SELECT beatmapset_id FROM audio_guesses WHERE date = ?""",
-            (today,) * 6,
+               UNION SELECT beatmapset_id FROM background_maps WHERE date IN (?, ?, ?)
+               UNION SELECT beatmapset_id FROM background_guesses WHERE date IN (?, ?, ?)
+               UNION SELECT beatmapset_id FROM audio_maps WHERE date IN (?, ?, ?)
+               UNION SELECT beatmapset_id FROM audio_guesses WHERE date IN (?, ?, ?)""",
+            (today, today) + tuple(media_round_key(today, level) for level in LEVELS) * 4,
         )
         for row in referenced_ids:
             map_id = row["beatmapset_id"]
@@ -203,6 +213,13 @@ def _load_beatmaps():
     return valid, by_id, eligible_ids
 
 BEATMAPS, BEATMAPS_BY_ID, ELIGIBLE_IDS = _load_beatmaps()
+# Rank beatmapsets by their catalog play-count snapshot. IDs break popularity ties.
+popular_ids = sorted(ELIGIBLE_IDS, key=lambda i: (-BEATMAPS_BY_ID[i]["play_count"], i))
+MEDIA_POOLS = {
+    level: popular_ids[index * len(popular_ids) // 3:(index + 1) * len(popular_ids) // 3]
+    for index, level in enumerate(LEVELS)
+}
+
 BACKGROUND_COVERS = [
     item.get("cover_url")
     or f"https://assets.ppy.sh/beatmaps/{item['beatmapset_id']}/covers/cover.jpg"
@@ -1364,18 +1381,19 @@ async def search_maps_api(request: Request):
     return {"success": True, "results": results}
 
 
-def background_answer(conn, day):
-    row = conn.execute("SELECT beatmapset_id FROM background_maps WHERE date = ?", (day,)).fetchone()
+def background_answer(conn, day, difficulty="medium"):
+    key = media_round_key(day, difficulty)
+    row = conn.execute("SELECT beatmapset_id FROM background_maps WHERE date = ?", (key,)).fetchone()
     if row:
         return row["beatmapset_id"]
     classic = get_daily_map(day)["beatmapset_id"]
-    choices = [map_id for map_id in ELIGIBLE_IDS if map_id != classic] or [classic]
-    seed = hashlib.sha256(f"background:{day}".encode()).digest()
+    choices = [map_id for map_id in MEDIA_POOLS[difficulty] if map_id != classic]
+    seed = hashlib.sha256(f"background:{key}".encode()).digest()
     map_id = choices[int.from_bytes(seed, "big") % len(choices)]
     with conn:
-        conn.execute("INSERT INTO background_maps VALUES (?, ?) ON CONFLICT(date) DO NOTHING", (day, map_id))
+        conn.execute("INSERT INTO background_maps VALUES (?, ?) ON CONFLICT(date) DO NOTHING", (key, map_id))
         archive_map(conn, BEATMAPS_BY_ID[map_id])
-    return conn.execute("SELECT beatmapset_id FROM background_maps WHERE date = ?", (day,)).fetchone()["beatmapset_id"]
+    return conn.execute("SELECT beatmapset_id FROM background_maps WHERE date = ?", (key,)).fetchone()["beatmapset_id"]
 
 
 def media_player(request, action, limit):
@@ -1395,13 +1413,13 @@ def background_history(conn, user_id, day):
     return [row["beatmapset_id"] for row in rows]
 
 
-def background_state(day, answer, guesses):
+def background_state(day, answer, guesses, difficulty):
     won = answer in guesses
     finished = won or len(guesses) >= MAX_ATTEMPTS
     state = {
         "success": True, "date": day, "won": won, "finished": finished,
         "attempts": [{"map": search_map(BEATMAPS_BY_ID[n])} for n in guesses],
-        "image": f"/api/background/image?day={day}&step={len(guesses)}",
+        "image": f"/api/background/image?day={day}&difficulty={difficulty}&step={len(guesses)}",
     }
     if finished:
         state["answer"] = public_map(BEATMAPS_BY_ID[answer])
@@ -1409,23 +1427,25 @@ def background_state(day, answer, guesses):
 
 
 @app.get("/api/background/game")
-def background_game(request: Request):
+def background_game(request: Request, difficulty: Difficulty = "medium"):
     user = media_player(request, "bg-game", RATE_LIMIT_MAX_GAME_READS)
     day = today_colombia()
+    key = media_round_key(day, difficulty)
     with closing(get_connection()) as conn:
-        answer = background_answer(conn, day)
-        state = background_state(day, answer, background_history(conn, user, day))
+        answer = background_answer(conn, day, difficulty)
+        state = background_state(day, answer, background_history(conn, user, key), difficulty)
     state["backgrounds"] = decorative_backgrounds(day)
     return state
 
 
 @app.get("/api/background/image")
-def background_image(request: Request):
+def background_image(request: Request, difficulty: Difficulty = "medium"):
     user = media_player(request, "bg-image", 60)
     day = today_colombia()
+    key = media_round_key(day, difficulty)
     with closing(get_connection()) as conn:
-        answer = background_answer(conn, day)
-        guesses = background_history(conn, user, day)
+        answer = background_answer(conn, day, difficulty)
+        guesses = background_history(conn, user, key)
     step = MAX_ATTEMPTS if answer in guesses else len(guesses)
     try:
         data = render_background(answer, step)
@@ -1435,7 +1455,7 @@ def background_image(request: Request):
 
 
 @app.post("/api/background/guess")
-async def background_guess(request: Request):
+async def background_guess(request: Request, difficulty: Difficulty = "medium"):
     if not validate_same_origin(request):
         raise HTTPException(403, "Invalid request origin.")
     user = media_player(request, "bg-guess", RATE_LIMIT_MAX_GUESSES)
@@ -1447,33 +1467,35 @@ async def background_guess(request: Request):
     if type(guess) is not int or guess not in BEATMAPS_BY_ID:
         raise HTTPException(400, "Choose a beatmapset.")
     day = today_colombia()
+    key = media_round_key(day, difficulty)
     if body.get("date") != day:
         raise HTTPException(409, "A new daily background is ready. Refresh to play.")
     with closing(get_connection()) as conn:
-        answer = background_answer(conn, day)
+        answer = background_answer(conn, day, difficulty)
         with conn:
             lock_guesses(conn, user)
-            guesses = background_history(conn, user, day)
+            guesses = background_history(conn, user, key)
             if answer not in guesses and len(guesses) < MAX_ATTEMPTS:
                 if guess in guesses:
                     raise HTTPException(409, "You already guessed this beatmap.")
                 archive_map(conn, BEATMAPS_BY_ID[guess])
-                conn.execute("INSERT INTO background_guesses VALUES (?, ?, ?, ?)", (user, day, len(guesses)+1, guess))
+                conn.execute("INSERT INTO background_guesses VALUES (?, ?, ?, ?)", (user, key, len(guesses)+1, guess))
                 guesses.append(guess)
-        return background_state(day, answer, guesses)
+        return background_state(day, answer, guesses, difficulty)
 
 
 audio_selection_lock = Lock()
 
 
-def daily_song(conn, day):
+def daily_song(conn, day, difficulty):
+    key = media_round_key(day, difficulty)
     with audio_selection_lock:
-        row = conn.execute("SELECT beatmapset_id FROM audio_maps WHERE date = ?", (day,)).fetchone()
+        row = conn.execute("SELECT beatmapset_id FROM audio_maps WHERE date = ?", (key,)).fetchone()
         if row:
             return row["beatmapset_id"]
-        excluded = {get_daily_map(day)["beatmapset_id"], background_answer(conn, day)}
-        candidates = [n for n in ELIGIBLE_IDS if n not in excluded] or ELIGIBLE_IDS
-        for candidate in random.Random("audio:" + day).sample(candidates, min(12, len(candidates))):
+        excluded = {get_daily_map(day)["beatmapset_id"], background_answer(conn, day, difficulty)}
+        candidates = [n for n in MEDIA_POOLS[difficulty] if n not in excluded]
+        for candidate in random.Random("audio:" + key).sample(candidates, min(12, len(candidates))):
             try:
                 pcm = fetch_preview(candidate)
             except (httpx.HTTPError, OSError, TimeoutError) as error:
@@ -1481,10 +1503,10 @@ def daily_song(conn, day):
             if pcm is None:
                 continue
             with conn:
-                conn.execute("INSERT INTO audio_maps VALUES (?, ?, ?) ON CONFLICT(date) DO NOTHING", (day, candidate, pcm))
+                conn.execute("INSERT INTO audio_maps VALUES (?, ?, ?) ON CONFLICT(date) DO NOTHING", (key, candidate, pcm))
                 archive_map(conn, BEATMAPS_BY_ID[candidate])
                 conn.execute("UPDATE audio_maps SET pcm = NULL WHERE date < ? AND pcm IS NOT NULL", (day,))
-            return conn.execute("SELECT beatmapset_id FROM audio_maps WHERE date = ?", (day,)).fetchone()["beatmapset_id"]
+            return conn.execute("SELECT beatmapset_id FROM audio_maps WHERE date = ?", (key,)).fetchone()["beatmapset_id"]
     raise HTTPException(503, "No playable preview found for today.")
 
 
@@ -1504,7 +1526,7 @@ def song_history(conn, user, day):
     )]
 
 
-def song_state(answer, day, guesses):
+def song_state(answer, day, guesses, difficulty):
     key = song_key(answer)
     attempts = [{"map": search_map(BEATMAPS_BY_ID[n]), "correct": song_key(n) == key} for n in guesses]
     won = any(item["correct"] for item in attempts)
@@ -1512,7 +1534,7 @@ def song_state(answer, day, guesses):
     seconds = STAGES[-1] if finished else STAGES[len(attempts)]
     state = {
         "success": True, "date": day, "attempts": attempts, "won": won, "finished": finished,
-        "seconds": seconds, "audio": f"/api/audio/clip?day={day}&stage={seconds}",
+        "seconds": seconds, "audio": f"/api/audio/clip?day={day}&difficulty={difficulty}&stage={seconds}",
     }
     if finished:
         state["answer"] = public_map(BEATMAPS_BY_ID[answer])
@@ -1520,34 +1542,36 @@ def song_state(answer, day, guesses):
 
 
 @app.get("/api/audio/game")
-def audio_game(request: Request):
+def audio_game(request: Request, difficulty: Difficulty = "medium"):
     user = media_player(request, "audio-game", RATE_LIMIT_MAX_GAME_READS)
     day = today_colombia()
+    key = media_round_key(day, difficulty)
     with closing(get_connection()) as conn:
-        answer = daily_song(conn, day)
-        state = song_state(answer, day, song_history(conn, user, day))
+        answer = daily_song(conn, day, difficulty)
+        state = song_state(answer, day, song_history(conn, user, key), difficulty)
     state["backgrounds"] = decorative_backgrounds(day)
     return state
 
 
 @app.get("/api/audio/clip")
-def audio_clip(request: Request):
+def audio_clip(request: Request, difficulty: Difficulty = "medium"):
     user = media_player(request, "audio-clip", 90)
     day = today_colombia()
+    key = media_round_key(day, difficulty)
     if request.query_params.get("day", day) != day:
         raise HTTPException(409, "A new song is ready. Refresh to play.")
     with closing(get_connection()) as conn:
-        answer = daily_song(conn, day)
-        seconds = song_state(answer, day, song_history(conn, user, day))["seconds"]
+        answer = daily_song(conn, day, difficulty)
+        seconds = song_state(answer, day, song_history(conn, user, key), difficulty)["seconds"]
         pcm = conn.execute(
             "SELECT substr(pcm, 1, ?) AS pcm FROM audio_maps WHERE date = ?",
-            (seconds * SAMPLE_RATE * 2, day),
+            (seconds * SAMPLE_RATE * 2, key),
         ).fetchone()["pcm"]
     return Response(wav_clip(pcm, seconds), media_type="audio/wav", headers={"Cache-Control": "private, no-store"})
 
 
 @app.post("/api/audio/guess")
-async def audio_guess(request: Request):
+async def audio_guess(request: Request, difficulty: Difficulty = "medium"):
     if not validate_same_origin(request):
         raise HTTPException(403, "Invalid request origin.")
     user = media_player(request, "audio-guess", RATE_LIMIT_MAX_GUESSES)
@@ -1561,32 +1585,36 @@ async def audio_guess(request: Request):
     day = today_colombia()
     if body.get("date") != day:
         raise HTTPException(409, "A new song is ready. Refresh to play.")
-    return await run_in_threadpool(record_audio_guess, user, day, guess)
+    return await run_in_threadpool(record_audio_guess, user, day, guess, difficulty)
 
 
-def record_audio_guess(user, day, guess):
+def record_audio_guess(user, day, guess, difficulty):
+    key = media_round_key(day, difficulty)
     with closing(get_connection()) as conn:
-        answer = daily_song(conn, day)
+        answer = daily_song(conn, day, difficulty)
         with conn:
             lock_guesses(conn, user)
-            guesses = song_history(conn, user, day)
-            state = song_state(answer, day, guesses)
+            guesses = song_history(conn, user, key)
+            state = song_state(answer, day, guesses, difficulty)
             if state["finished"]:
                 return state
             if any(song_key(n) == song_key(guess) for n in guesses):
                 raise HTTPException(409, "You already guessed this song.")
             archive_map(conn, BEATMAPS_BY_ID[guess])
-            conn.execute("INSERT INTO audio_guesses VALUES (?, ?, ?, ?)", (user, day, len(guesses)+1, guess))
-            return song_state(answer, day, guesses + [guess])
+            conn.execute("INSERT INTO audio_guesses VALUES (?, ?, ?, ?)", (user, key, len(guesses)+1, guess))
+            return song_state(answer, day, guesses + [guess], difficulty)
 
 
 def decorative_backgrounds(day):
     classic = get_daily_map(day)["beatmapset_id"]
     with closing(get_connection()) as conn:
         excluded = {classic, background_answer(conn, day)}
-        song = conn.execute("SELECT beatmapset_id FROM audio_maps WHERE date = ?", (day,)).fetchone()
-        if song:
-            excluded.add(song["beatmapset_id"])
+        keys = tuple(media_round_key(day, level) for level in LEVELS)
+        selected = conn.execute(
+            "SELECT beatmapset_id FROM background_maps WHERE date IN (?, ?, ?) "
+            "UNION SELECT beatmapset_id FROM audio_maps WHERE date IN (?, ?, ?)", keys * 2
+        )
+        excluded.update(row["beatmapset_id"] for row in selected)
     candidates = [url for item, url in zip(BEATMAPS, BACKGROUND_COVERS) if item["beatmapset_id"] not in excluded]
     return random.sample(candidates, min(30, len(candidates)))
 
@@ -1982,7 +2010,7 @@ def results_query(conn, mode, today, user_id=None):
 
     if mode == "background":
         query = f"""
-            SELECT g.user_id, g.date, COUNT(*) AS attempts,
+            SELECT g.user_id, substr(g.date, 1, 10) AS date, COUNT(*) AS attempts,
                    MAX(CASE WHEN g.beatmapset_id = m.beatmapset_id THEN 1 ELSE 0 END) AS won, 0 AS score
             FROM background_guesses g JOIN background_maps m ON m.date = g.date
             {where} GROUP BY g.user_id, g.date
@@ -2000,7 +2028,7 @@ def results_query(conn, mode, today, user_id=None):
             match = """same_song(json_extract(guess.data, '$.artist'), json_extract(guess.data, '$.title'),
                                  json_extract(answer.data, '$.artist'), json_extract(answer.data, '$.title'))"""
         query = f"""
-            SELECT g.user_id, g.date, COUNT(*) AS attempts, MAX(CASE WHEN g.beatmapset_id = m.beatmapset_id
+            SELECT g.user_id, substr(g.date, 1, 10) AS date, COUNT(*) AS attempts, MAX(CASE WHEN g.beatmapset_id = m.beatmapset_id
                    OR {match} THEN 1 ELSE 0 END) AS won,
                    0 AS score
             FROM audio_guesses g JOIN audio_maps m ON m.date = g.date
@@ -2090,13 +2118,8 @@ async def get_user_stats(request: Request):
     streak = 0
     previous = None
 
-    for row in rows:
-        if row["won"] != 1:
-            streak = 0
-            previous = None
-            continue
-
-        current = date.fromisoformat(row["date"])
+    for win_day in sorted(winning_dates):
+        current = date.fromisoformat(win_day)
 
         if previous is not None and current == previous + timedelta(days=1):
             streak += 1

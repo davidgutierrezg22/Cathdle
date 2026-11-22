@@ -151,6 +151,7 @@ def process_beatmapset(beatmapset):
 
     ranked_date = beatmapset.get("ranked_date")
     result = {
+        "play_count": beatmapset["play_count"],
         "ranked_year": int(ranked_date[:4]) if ranked_date else None,
 
         "beatmapset_id":

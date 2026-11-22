@@ -5,9 +5,12 @@ const mediaMode = audioMode || backgroundMode;
 const activeMode = mediaMode ? requestedMode : "classic";
 const modeLabel = tr(audioMode ? "Audio" : backgroundMode ? "Background" : "Classic");
 const modePath = mediaMode ? "/api/" + requestedMode : "/api";
-const GAME_URL = modePath + "/game";
+const levelParam = new URLSearchParams(location.search).get("difficulty");
+const difficulty = ["easy", "hard"].includes(levelParam) ? levelParam : "medium";
+const levelQuery = mediaMode ? "?difficulty=" + difficulty : "";
+const GAME_URL = modePath + "/game" + levelQuery;
 const SEARCH_URL = "/api/search";
-const STORAGE_KEY = mediaMode ? "catchdle_" + requestedMode + "_game" : "catchdle_daily_game";
+const STORAGE_KEY = mediaMode ? "catchdle_" + requestedMode + "_" + difficulty + "_game" : "catchdle_daily_game";
 const MAX_ATTEMPTS = audioMode ? 6 : 10;
 
 const CLUE_STATS_ATTEMPT = 3;
@@ -495,7 +498,7 @@ async function makeGuess() {
     guessButton.disabled = true;
     mapInput.disabled = true;
     try {
-        const response = await fetch(modePath + "/guess", {
+        const response = await fetch(modePath + "/guess" + levelQuery, {
             method: "POST",
             credentials: "include",
             headers: { "Content-Type": "application/json" },
@@ -1695,6 +1698,14 @@ async function init() {
         document.getElementById(mediaMode ? requestedMode + "Mode" : "classicMode").setAttribute("aria-current", "page");
         if (mediaMode) {
             document.body.classList.add("media-mode");
+            const select = document.getElementById("difficultySelect");
+            select.value = difficulty;
+            document.getElementById("mediaLevel").hidden = false;
+            select.addEventListener("change", () => {
+                const url = new URL(location.href);
+                url.searchParams.set("difficulty", select.value);
+                location.assign(url);
+            });
         } else {
             const counter = attemptCount.parentElement;
             counter.replaceChildren(attemptCount);

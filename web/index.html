@@ -7,7 +7,7 @@
 
     <title>Catchdle</title>
 
-    <link rel="stylesheet" href="style.css?v=classic-summary">
+    <link rel="stylesheet" href="style.css?v=media-levels">
 </head>
 
 <body class="at-login">
@@ -138,6 +138,14 @@
                 <a href="?mode=background" id="backgroundMode">Background</a>
                 <a href="?mode=audio" id="audioMode">Audio</a>
             </nav>
+            <label id="mediaLevel" hidden>
+                <span>Challenge difficulty</span>
+                <select id="difficultySelect">
+                    <option value="easy">Easy</option>
+                    <option value="medium" selected>Medium</option>
+                    <option value="hard">Hard</option>
+                </select>
+            </label>
             <p class="subtitle">
                 Guess the daily osu!catch beatmapset.
             </p>
@@ -1059,9 +1067,9 @@
          JAVASCRIPT
     ========================================== -->
 
-    <script src="languages.js?v=classic-summary"></script>
+    <script src="languages.js?v=media-levels"></script>
     <script src="player.js?v=1"></script>
-    <script src="script.js?v=classic-summary"></script>
+    <script src="script.js?v=media-levels"></script>
 
 
 </body>
