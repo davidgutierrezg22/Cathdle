@@ -3300,3 +3300,17 @@ body:not(.at-login) > .login-screen {
 #clipControls svg { display:block; width:20px; height:20px; margin:auto; fill:currentColor; }
 #clipMute .sound-off, #clipMute.silent .sound-wave { display:none; }
 #clipMute.silent .sound-off { display:inline; }
+
+body:not(.media-mode) .attempt-counter { margin: 12px auto; }
+body:not(.media-mode) #attemptCount { color: #ffda70; }
+#classicSummary { margin-bottom: 18px; border: 1px solid #42404d; border-radius: 8px; background: #191c25; }
+#classicSummary summary { padding: 10px 14px; cursor: pointer; font-weight: 700; }
+#summaryValues { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); margin: 0; padding: 0 12px 12px; gap: 8px; }
+#summaryValues dt { color: #d0bdca; font-size: 12px; }
+#summaryValues dd { margin: 3px 0 0; font-weight: 700; overflow-wrap: anywhere; }
+#summaryValues dd span { display: block; }
+#summaryValues .exact { color: #76dfa6; }
+#summaryValues .near { color: #ffda70; }
+@media (max-width: 680px) {
+    #summaryValues { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}

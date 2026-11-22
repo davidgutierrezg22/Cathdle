@@ -250,7 +250,66 @@ function renderAttempt(attempt) {
     attemptsContainer.prepend(row);
 }
 
+const summaryFields = [
+    ["Artist", "artist"], ["Mapper", "mapper"], ["Stars", "stars"],
+    ["BPM", "bpm"], ["Length", "length", "duration"], ["Year", "year", "ranked_year"]
+];
+
+function summarizeField(attempts, field, mapKey) {
+    let lower = null;
+    let upper = null;
+    for (const attempt of attempts) {
+        const value = attempt.map?.[mapKey];
+        const hint = attempt.comparison?.[field];
+        if (value == null || !hint) continue;
+        if (hint === "correct" || hint.status === "correct") {
+            return { exact: value };
+        }
+        if (hint.arrow === "↑" && (lower === null || value > lower.value)) lower = { value, status: hint.status };
+        if (hint.arrow === "↓" && (upper === null || value < upper.value)) upper = { value, status: hint.status };
+    }
+    return { lower, upper };
+}
+
+function renderGuessSummary() {
+    if (mediaMode) return;
+    const panel = document.getElementById("classicSummary");
+    const attempts = gameState?.attempts || [];
+    panel.hidden = attempts.length === 0;
+    const list = document.getElementById("summaryValues");
+    list.replaceChildren();
+    if (panel.hidden) return;
+    for (const [label, field, mapKey = field] of summaryFields) {
+        const result = summarizeField(attempts, field, mapKey);
+        const format = value => {
+            if (field === "length") return formatDuration(value);
+            if (field === "stars" || field === "bpm") return twoDecimals.format(value);
+            return String(value);
+        };
+        const group = document.createElement("div");
+        const title = document.createElement("dt");
+        title.textContent = tr(label);
+        const data = document.createElement("dd");
+        if (result.exact !== undefined) {
+            data.className = "exact";
+            data.textContent = "✓ " + format(result.exact);
+        } else {
+            for (const [bound, arrow] of [[result.lower, "↑"], [result.upper, "↓"]]) {
+                if (!bound) continue;
+                const span = document.createElement("span");
+                span.textContent = format(bound.value) + " " + arrow;
+                if (bound.status === "close") span.className = "near";
+                data.append(span);
+            }
+            if (!data.childElementCount) data.textContent = "—";
+        }
+        group.append(title, data);
+        list.append(group);
+    }
+}
+
 function renderHistory() {
+    renderGuessSummary();
 
     if (!attemptsContainer) {
         return;
@@ -454,7 +513,10 @@ async function makeGuess() {
         gameState.won = Boolean(data.won);
         if (data.answer) secretMap = data.answer;
         saveGameState();
-        if (data.attempt) renderAttempt(data.attempt);
+        if (data.attempt) {
+            renderAttempt(data.attempt);
+            renderGuessSummary();
+        }
         updateAttemptCounter();
         updateClueButtons();
         applyServerClues(data.clue_data || {}, gameState.clues);
@@ -1186,7 +1248,12 @@ function updateAttemptCounter() {
     const current = Array.isArray(gameState?.attempts)
         ? gameState.attempts.length
         : 0;
-    if (attemptCount) attemptCount.textContent = current;
+    if (mediaMode) {
+        if (attemptCount) attemptCount.textContent = current;
+    } else {
+        const number = gameState?.won ? current : Math.min(current + 1, MAX_ATTEMPTS);
+        attemptCount.textContent = tr("Guess {n}/{max}", { n: number, max: MAX_ATTEMPTS });
+    }
 }
 
 function showMessage(text, type = "normal") {
@@ -1626,7 +1693,13 @@ async function loadLoginCovers() {
 async function init() {
     try {
         document.getElementById(mediaMode ? requestedMode + "Mode" : "classicMode").setAttribute("aria-current", "page");
-        if (mediaMode) document.body.classList.add("media-mode");
+        if (mediaMode) {
+            document.body.classList.add("media-mode");
+        } else {
+            const counter = attemptCount.parentElement;
+            counter.replaceChildren(attemptCount);
+            document.querySelector(".search-area").before(counter);
+        }
         if (audioMode) {
             document.querySelector(".hero .subtitle").textContent = tr("Which song is playing?");
             document.getElementById("audioPuzzle").hidden = false;
