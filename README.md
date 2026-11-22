@@ -14,7 +14,7 @@ How much of a beatmap do you need to recognize it? Catchdle has three daily gues
 
 Background and Audio each have three daily challenges. Easy draws from the most-played third of the catalog, Medium from the middle third and Hard from the least-played third, using osu!'s total play count for each beatmapset. Each difficulty saves its own guesses. Your profile and leaderboard count completed rounds across difficulties within each mode.
 
-In Classic, green means a match and yellow means you're close. If BPM shows an up arrow, try a faster song. The year comes from the date the set became Ranked or Loved. A yellow year is one year off. After three guesses you can reveal CS, AR, OD and HP. The difficulty name unlocks after five guesses and the background after seven.
+In Classic, green means a match and yellow means you're close. If BPM shows an up arrow, try a faster song. The year comes from the date the set became Ranked or Loved. A yellow year is one year off. After three guesses you can reveal CS, AR, OD and HP. The difficulty name unlocks after five guesses. You can reveal the background before your tenth and final guess.
 
 A first-guess Classic win earns 100 points. Each extra guess takes 10 points off a win. Open your profile to see your wins and streaks in each mode. Each mode also has its own leaderboard.
 
