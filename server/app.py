@@ -83,7 +83,7 @@ if ENVIRONMENT == "production" and not COOKIE_SECURE:
 
 app = FastAPI(
     title="Catchdle API",
-    version="3.0.0",
+    version="3.0.1",
     docs_url=None if ENVIRONMENT == "production" else "/docs",
     redoc_url=None if ENVIRONMENT == "production" else "/redoc",
 )
@@ -1427,14 +1427,15 @@ def background_state(day, answer, guesses, difficulty):
 
 
 @app.get("/api/background/game")
-def background_game(request: Request, difficulty: Difficulty = "medium"):
+def background_game(request: Request, difficulty: Difficulty = "medium", include_backgrounds: bool = True):
     user = media_player(request, "bg-game", RATE_LIMIT_MAX_GAME_READS)
     day = today_colombia()
     key = media_round_key(day, difficulty)
     with closing(get_connection()) as conn:
         answer = background_answer(conn, day, difficulty)
         state = background_state(day, answer, background_history(conn, user, key), difficulty)
-    state["backgrounds"] = decorative_backgrounds(day)
+    if include_backgrounds:
+        state["backgrounds"] = decorative_backgrounds(day)
     return state
 
 
@@ -1542,14 +1543,15 @@ def song_state(answer, day, guesses, difficulty):
 
 
 @app.get("/api/audio/game")
-def audio_game(request: Request, difficulty: Difficulty = "medium"):
+def audio_game(request: Request, difficulty: Difficulty = "medium", include_backgrounds: bool = True):
     user = media_player(request, "audio-game", RATE_LIMIT_MAX_GAME_READS)
     day = today_colombia()
     key = media_round_key(day, difficulty)
     with closing(get_connection()) as conn:
         answer = daily_song(conn, day, difficulty)
         state = song_state(answer, day, song_history(conn, user, key), difficulty)
-    state["backgrounds"] = decorative_backgrounds(day)
+    if include_backgrounds:
+        state["backgrounds"] = decorative_backgrounds(day)
     return state
 
 
@@ -1620,12 +1622,12 @@ def decorative_backgrounds(day):
 
 
 @app.get("/api/backgrounds")
-async def get_backgrounds():
+def get_backgrounds():
     return {"success": True, "backgrounds": decorative_backgrounds(today_colombia())}
 
 
 @app.get("/api/game")
-async def get_game_state(request: Request):
+async def get_game_state(request: Request, include_backgrounds: bool = True):
     session = _get_authenticated_session(request)
     if not session:
         return JSONResponse({"error": "No has iniciado sesión"}, status_code=401)
@@ -1689,7 +1691,8 @@ async def get_game_state(request: Request):
     if finished:
         payload["answer"] = public_map(daily)
 
-    payload["backgrounds"] = decorative_backgrounds(today)
+    if include_backgrounds:
+        payload["backgrounds"] = decorative_backgrounds(today)
     return payload
 
 

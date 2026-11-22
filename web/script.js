@@ -1,17 +1,25 @@
-const requestedMode = new URLSearchParams(location.search).get("mode");
-const backgroundMode = requestedMode === "background";
-const audioMode = requestedMode === "audio";
-const mediaMode = audioMode || backgroundMode;
-const activeMode = mediaMode ? requestedMode : "classic";
-const modeLabel = tr(audioMode ? "Audio" : backgroundMode ? "Background" : "Classic");
-const modePath = mediaMode ? "/api/" + requestedMode : "/api";
-const levelParam = new URLSearchParams(location.search).get("difficulty");
-const difficulty = ["easy", "hard"].includes(levelParam) ? levelParam : "medium";
-const levelQuery = mediaMode ? "?difficulty=" + difficulty : "";
-const GAME_URL = modePath + "/game" + levelQuery;
+function readRoute() {
+    const params = new URLSearchParams(location.search);
+    const audio = params.get("mode") === "audio";
+    const background = params.get("mode") === "background";
+    const media = audio || background;
+    const mode = audio ? "audio" : background ? "background" : "classic";
+    const level = ["easy", "hard"].includes(params.get("difficulty")) ? params.get("difficulty") : "medium";
+    const path = media ? "/api/" + mode : "/api";
+    const query = media ? "?difficulty=" + level : "";
+    return {
+        mode, media, audio, background, level, path, query,
+        gameUrl: path + "/game" + query + (media ? "&" : "?") + "include_backgrounds=false",
+        limit: audio ? 6 : 10,
+        label: tr(audio ? "Audio" : background ? "Background" : "Classic"),
+        storageKey: media ? "catchdle_" + mode + "_" + level + "_game" : "catchdle_daily_game"
+    };
+}
+
+let route = readRoute();
+let navigation;
+const pendingGuesses = new Map();
 const SEARCH_URL = "/api/search";
-const STORAGE_KEY = mediaMode ? "catchdle_" + requestedMode + "_" + difficulty + "_game" : "catchdle_daily_game";
-const MAX_ATTEMPTS = audioMode ? 6 : 10;
 
 const CLUE_STATS_ATTEMPT = 3;
 const CLUE_DIFFICULTY_ATTEMPT = 5;
@@ -66,7 +74,7 @@ function getColombiaDate() {
 function saveGameState() {
     try {
         localStorage.setItem(
-            STORAGE_KEY,
+            route.storageKey,
             JSON.stringify(gameState)
         );
     } catch (error) {
@@ -238,8 +246,8 @@ function renderAttempt(attempt) {
     mapCell.append(image, mapInfo);
     row.appendChild(mapCell);
 
-    if (mediaMode) {
-        const matched = audioMode ? attempt.correct : map.beatmapset_id === secretMap?.beatmapset_id;
+    if (route.media) {
+        const matched = route.audio ? attempt.correct : map.beatmapset_id === secretMap?.beatmapset_id;
         row.appendChild(createCell(tr(matched ? "Correct" : "Incorrect"), matched ? "correct" : "wrong"));
         attemptsContainer.prepend(row);
         return;
@@ -275,7 +283,7 @@ function summarizeField(attempts, field, mapKey) {
 }
 
 function renderGuessSummary() {
-    if (mediaMode) return;
+    if (route.media) return;
     const panel = document.getElementById("classicSummary");
     const attempts = gameState?.attempts || [];
     panel.hidden = attempts.length === 0;
@@ -405,6 +413,7 @@ let searchTimer = null;
 
 function searchMaps(query) {
     const normalized = normalize(query);
+    const searchRoute = route;
     if (searchTimer) clearTimeout(searchTimer);
     if (normalized.length < 2) {
         if (suggestions) { suggestions.innerHTML = ""; suggestions.classList.add("hidden"); }
@@ -415,7 +424,7 @@ function searchMaps(query) {
             const response = await fetch(`${SEARCH_URL}?q=${encodeURIComponent(normalized)}`, { credentials: "include", cache: "no-store" });
             const data = await response.json();
             if (!response.ok || !data.success) throw new Error(data.error || "Search failed");
-            if (!suggestions) return;
+            if (!suggestions || searchRoute !== route || normalize(mapInput.value) !== normalized) return;
             suggestions.replaceChildren();
             const results = Array.isArray(data.results) ? data.results : [];
             if (!results.length) { suggestions.classList.add("hidden"); return; }
@@ -444,6 +453,7 @@ function searchMaps(query) {
             });
             suggestions.classList.remove("hidden");
         } catch (error) {
+            if (searchRoute !== route) return;
             console.error("Search error:", error);
             suggestions?.classList.add("hidden");
         }
@@ -493,20 +503,24 @@ function selectMap(map) {
    ========================================================= */
 
 async function makeGuess() {
-    if (!selectedMap || !gameState || gameState.won || gameState.attempts.length >= MAX_ATTEMPTS) return;
+    if (pendingGuesses.has(route.gameUrl) || !selectedMap || !gameState || gameState.won || gameState.attempts.length >= route.limit) return;
     const guessedMap = selectedMap;
+    const submittedRoute = route;
     guessButton.disabled = true;
     mapInput.disabled = true;
     try {
-        const response = await fetch(modePath + "/guess" + levelQuery, {
+        const request = fetch(route.path + "/guess" + route.query, {
             method: "POST",
             credentials: "include",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ beatmapset_id: guessedMap.beatmapset_id, date: gameState.date })
         });
+        pendingGuesses.set(route.gameUrl, request);
+        const response = await request;
         const data = await response.json();
+        if (submittedRoute !== route) return;
         if (!response.ok || !data.success) throw new Error(data.error || data.detail || "Could not process guess.");
-        if (mediaMode) {
+        if (route.media) {
             applyGameState(data);
             if (!data.finished) showMessage("Incorrect guess.", "normal");
             return;
@@ -524,14 +538,17 @@ async function makeGuess() {
         updateClueButtons();
         applyServerClues(data.clue_data || {}, gameState.clues);
         if (data.correct) showWinScreen();
-        else if (data.finished || data.attempts >= MAX_ATTEMPTS) showLoseScreen();
+        else if (data.finished || data.attempts >= route.limit) showLoseScreen();
         else showMessage("Incorrect guess.", "normal");
     } catch (error) {
+        if (submittedRoute !== route) return;
         console.error("Error processing guess:", error);
         showMessage(error.message || "Could not process guess.", "error");
     } finally {
+        pendingGuesses.delete(submittedRoute.gameUrl);
+        if (submittedRoute !== route) return;
         selectedMap = null;
-        mapInput.disabled = gameState.won || gameState.attempts.length >= MAX_ATTEMPTS;
+        mapInput.disabled = gameState.won || gameState.attempts.length >= route.limit;
         mapInput.value = "";
         suggestions?.replaceChildren();
         suggestions?.classList.add("hidden");
@@ -596,6 +613,7 @@ async function loadCurrentUser() {
    ========================================================= */
 
 async function loadLeaderboard() {
+    const openedRoute = route;
 
     const body =
         document.getElementById(
@@ -611,7 +629,7 @@ async function loadLeaderboard() {
     body.innerHTML = `
         <tr>
             <td
-                colspan="${mediaMode ? 5 : 6}"
+                colspan="${route.media ? 5 : 6}"
                 class="leaderboard-loading"
             >
                 ${tr("Loading leaderboard...")}
@@ -624,7 +642,7 @@ async function loadLeaderboard() {
 
         const response =
             await fetch(
-                "/api/leaderboard?mode=" + activeMode,
+                "/api/leaderboard?mode=" + route.mode,
                 {
                     credentials:
                         "include",
@@ -637,6 +655,7 @@ async function loadLeaderboard() {
 
         const data =
             await response.json();
+        if (openedRoute !== route) return;
 
 
         if (
@@ -667,7 +686,7 @@ async function loadLeaderboard() {
             body.innerHTML = `
                 <tr>
                     <td
-                        colspan="${mediaMode ? 5 : 6}"
+                        colspan="${route.media ? 5 : 6}"
                         class="leaderboard-empty"
                     >
                         ${tr("No players yet.")}
@@ -785,7 +804,7 @@ async function loadLeaderboard() {
 
                                 </td>
 
-                                ${mediaMode ? "" : `<td class="points-cell">${points}</td>`}
+                                ${route.media ? "" : `<td class="points-cell">${points}</td>`}
 
                                 <td>
                                     ${wins}
@@ -808,6 +827,7 @@ async function loadLeaderboard() {
 
 
     } catch (error) {
+        if (openedRoute !== route) return;
 
         console.error(
             "Error loading leaderboard:",
@@ -818,7 +838,7 @@ async function loadLeaderboard() {
         body.innerHTML = `
             <tr>
                 <td
-                    colspan="${mediaMode ? 5 : 6}"
+                    colspan="${route.media ? 5 : 6}"
                     class="leaderboard-error"
                 >
                     ${tr("Could not load leaderboard.")}
@@ -846,8 +866,8 @@ function openLeaderboard() {
     }
 
 
-    modal.querySelector("h2").textContent = tr("{mode} leaderboard", {mode: modeLabel});
-    modal.querySelector("th:nth-child(3)").classList.toggle("hidden", mediaMode);
+    modal.querySelector("h2").textContent = tr("{mode} leaderboard", {mode: route.label});
+    modal.querySelector("th:nth-child(3)").classList.toggle("hidden", route.media);
     modal.classList.remove(
         "hidden"
     );
@@ -883,6 +903,7 @@ function closeLeaderboard() {
    ========================================================= */
 
 async function loadStats() {
+    const openedRoute = route;
 
     const statsMessage =
         document.getElementById(
@@ -908,7 +929,7 @@ async function loadStats() {
 
         const response =
             await fetch(
-                "/api/stats?mode=" + activeMode,
+                "/api/stats?mode=" + route.mode,
                 {
                     credentials:
                         "include",
@@ -921,6 +942,7 @@ async function loadStats() {
 
         const data =
             await response.json();
+        if (openedRoute !== route) return;
 
 
         if (
@@ -1107,6 +1129,7 @@ async function loadStats() {
 
 
     } catch (error) {
+        if (openedRoute !== route) return;
 
         console.error(
             "Error loading statistics:",
@@ -1143,8 +1166,8 @@ async function openStats() {
     }
 
 
-    document.getElementById("statsTitle").textContent = tr("{mode} statistics", {mode: modeLabel});
-    document.getElementById("statPoints").parentElement.classList.toggle("hidden", mediaMode);
+    document.getElementById("statsTitle").textContent = tr("{mode} statistics", {mode: route.label});
+    document.getElementById("statPoints").parentElement.classList.toggle("hidden", route.media);
     modal.classList.remove(
         "hidden"
     );
@@ -1254,11 +1277,11 @@ function updateAttemptCounter() {
     const current = Array.isArray(gameState?.attempts)
         ? gameState.attempts.length
         : 0;
-    if (mediaMode) {
+    if (route.media) {
         if (attemptCount) attemptCount.textContent = current;
     } else {
-        const number = gameState?.won ? current : Math.min(current + 1, MAX_ATTEMPTS);
-        attemptCount.textContent = tr("Guess {n}/{max}", { n: number, max: MAX_ATTEMPTS });
+        const number = gameState?.won ? current : Math.min(current + 1, route.limit);
+        attemptCount.textContent = tr("Guess {n}/{max}", { n: number, max: route.limit });
     }
 }
 
@@ -1652,23 +1675,15 @@ document.addEventListener(
    INITIALIZATION
    ========================================================= */
 
-async function refreshGameState() {
-    const response = await fetch(GAME_URL, { credentials: "include", cache: "no-store" });
-    const data = await response.json();
-    if (!response.ok || !data.success) throw new Error(data.error || data.detail || `HTTP ${response.status}`);
-    applyGameState(data);
-    return data;
-}
-
 function applyGameState(data) {
     gameState = createGameState(data);
     secretMap = data.answer || null;
-    if (audioMode && data.audio) {
+    if (route.audio && data.audio) {
         const player = document.getElementById("songPlayer");
         document.getElementById("clipLength").textContent = tr("{n} s", {n: data.seconds});
         if (player.getAttribute("src") !== data.audio) player.src = data.audio;
     }
-    if (backgroundMode && data.image) {
+    if (route.background && data.image) {
         const image = document.getElementById("bgCrop");
         if (image.getAttribute("src") !== data.image) image.src = data.image;
     }
@@ -1676,7 +1691,7 @@ function applyGameState(data) {
     renderHistory();
     updateAttemptCounter();
     updateClueButtons();
-    if (Array.isArray(data.backgrounds)) createBackgroundCollage(data.backgrounds);
+    mapInput.disabled = Boolean(data.finished);
     if (data.finished) {
         if (gameState.won) showWinScreen();
         else showLoseScreen();
@@ -1684,66 +1699,140 @@ function applyGameState(data) {
     return data;
 }
 
-async function loadLoginCovers() {
+async function loadCovers(container, limit, signal) {
     try {
-        const response = await fetch("/api/backgrounds", { cache: "no-store" });
+        const response = await fetch("/api/backgrounds", { cache: "no-store", signal });
         if (response.ok) {
             const data = await response.json();
-            createBackgroundCollage(data.backgrounds, document.getElementById("loginCovers"), 12);
+            if (!signal?.aborted) createBackgroundCollage(data.backgrounds, container, limit);
         }
     } catch (error) {
-        console.warn("Could not load login covers", error);
+        if (!signal?.aborted) console.warn("Could not load covers", error);
     }
 }
 
+function setupMedia() {
+    const player = document.getElementById("songPlayer");
+    setupClipControls(player);
+    const retryAudio = document.getElementById("retryAudio");
+    player.onerror = () => { if (route.audio && player.getAttribute("src")) retryAudio.hidden = false; };
+    player.onloadeddata = () => { retryAudio.hidden = true; };
+    retryAudio.onclick = () => player.load();
+    const crop = document.getElementById("bgCrop");
+    const retryCrop = document.getElementById("retryCrop");
+    crop.onerror = () => { if (route.background && crop.getAttribute("src")) retryCrop.hidden = false; };
+    crop.onload = () => { retryCrop.hidden = true; };
+    retryCrop.onclick = () => { crop.src = crop.src; };
+    document.getElementById("retryGame").onclick = navigateGame;
+}
+
+function prepareGame() {
+    gameState = null;
+    secretMap = null;
+    clearTimeout(searchTimer);
+    clearTimeout(messageTimeout);
+    clearInterval(countdownInterval);
+    endGameUI();
+    mapInput.value = "";
+    attemptsContainer.replaceChildren();
+    winScreen.classList.add("hidden");
+    closeStats();
+    closeLeaderboard();
+    document.getElementById("classicSummary").hidden = true;
+    updateClueButtons();
+    const player = document.getElementById("songPlayer");
+    if (player.hasAttribute("src")) {
+        player.pause();
+        player.removeAttribute("src");
+        player.load();
+    }
+    document.getElementById("bgCrop").removeAttribute("src");
+    for (const id of ["retryGame", "retryAudio", "retryCrop"]) document.getElementById(id).hidden = true;
+    document.body.classList.toggle("media-mode", route.media);
+    document.getElementById("audioPuzzle").hidden = !route.audio;
+    document.getElementById("bgPuzzle").hidden = !route.background;
+    document.getElementById("mediaLevels").hidden = !route.media;
+    document.getElementById("clipLength").textContent = tr("Loading today’s clip…");
+    document.querySelector(".hero .subtitle").textContent = tr(route.audio ? "Which song is playing?" :
+        route.background ? "Which beatmapset is this background from?" : "Guess the daily osu!catch beatmapset.");
+    const counter = attemptCount.parentElement;
+    const searchArea = document.querySelector(".search-area");
+    if (route.media) searchArea.after(counter);
+    else searchArea.before(counter);
+    document.getElementById("attemptSuffix").hidden = !route.media;
+    document.getElementById("attemptLimit").textContent = route.limit;
+    updateAttemptCounter();
+    for (const link of document.querySelectorAll(".game-modes a, #mediaLevels a")) {
+        const url = new URL(location.href);
+        let active;
+        if (link.closest("#mediaLevels")) {
+            const level = new URL(link.href).searchParams.get("difficulty");
+            url.searchParams.set("difficulty", level);
+            active = level === route.level;
+        } else {
+            const mode = new URL(link.href).searchParams.get("mode");
+            url.searchParams.set("mode", mode);
+            url.searchParams.delete("difficulty");
+            active = mode === route.mode;
+        }
+        link.href = url.href;
+        if (active) link.setAttribute("aria-current", "page");
+        else link.removeAttribute("aria-current");
+    }
+    message.textContent = tr("Loading…");
+    message.className = "message";
+}
+
+async function navigateGame() {
+    navigation?.abort();
+    navigation = new AbortController();
+    const { signal } = navigation;
+    route = readRoute();
+    prepareGame();
+    try {
+        const previousGuess = pendingGuesses.get(route.gameUrl);
+        if (previousGuess) await previousGuess.catch(() => {});
+        if (signal.aborted) return;
+        const response = await fetch(route.gameUrl, { credentials: "include", cache: "no-store", signal });
+        if (signal.aborted) return;
+        if (response.status === 401) { location.reload(); return; }
+        const data = await response.json();
+        if (signal.aborted) return;
+        if (!response.ok || !data.success) throw new Error(data.detail || data.error);
+        applyGameState(data);
+        message.textContent = "";
+        loadCovers(backgroundCollage, 30, signal);
+    } catch (error) {
+        if (signal.aborted) return;
+        message.textContent = tr("Try again in a moment.");
+        document.getElementById("retryGame").hidden = false;
+    }
+}
+
+document.addEventListener("click", event => {
+    const link = event.target.closest(".game-modes a, #mediaLevels a");
+    if (!currentUser || !link || event.defaultPrevented || event.button !== 0 ||
+        event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
+    event.preventDefault();
+    if (link.href === location.href && gameState) return;
+    if (link.href !== location.href) history.pushState(null, "", link.href);
+    navigateGame();
+});
+window.addEventListener("popstate", () => { if (currentUser) navigateGame(); });
+
 async function init() {
     try {
-        document.getElementById(mediaMode ? requestedMode + "Mode" : "classicMode").setAttribute("aria-current", "page");
-        if (mediaMode) {
-            document.body.classList.add("media-mode");
-            for (const link of document.querySelectorAll("#mediaLevels a")) {
-                const url = new URL(location.href);
-                const level = new URL(link.href).searchParams.get("difficulty");
-                url.searchParams.set("difficulty", level);
-                link.href = url.href;
-                if (level === difficulty) link.setAttribute("aria-current", "page");
-            }
-            document.getElementById("mediaLevels").hidden = false;
-        } else {
-            const counter = attemptCount.parentElement;
-            counter.replaceChildren(attemptCount);
-            document.querySelector(".search-area").before(counter);
-        }
-        if (audioMode) {
-            document.querySelector(".hero .subtitle").textContent = tr("Which song is playing?");
-            document.getElementById("audioPuzzle").hidden = false;
-            document.getElementById("attemptLimit").textContent = MAX_ATTEMPTS;
-            const player = document.getElementById("songPlayer");
-            setupClipControls(player);
-            const retry = document.getElementById("retryAudio");
-            player.onerror = () => { retry.hidden = false; };
-            player.onloadeddata = () => { retry.hidden = true; };
-            retry.onclick = () => { if (player.getAttribute("src")) player.load(); else refreshGameState().catch(error => showMessage(error.message, "error")); };
-        }
-        if (backgroundMode) {
-            document.querySelector(".hero .subtitle").textContent = tr("Which beatmapset is this background from?");
-            document.getElementById("bgPuzzle").hidden = false;
-            const image = document.getElementById("bgCrop");
-            const retry = document.getElementById("retryCrop");
-            image.onerror = () => { retry.hidden = false; };
-            image.onload = () => { retry.hidden = true; };
-            retry.onclick = () => { image.src = image.src; };
-        }
+        setupMedia();
         document.getElementById("editionDate").textContent = new Intl.DateTimeFormat(locale, {day:"numeric", month:"short", year:"numeric", timeZone:"America/Bogota"}).format(new Date());
         await loadCurrentUser();
         if (!currentUser) {
-            await loadLoginCovers();
+            await loadCovers(document.getElementById("loginCovers"), 12);
             return;
         }
-        await refreshGameState();
+        await navigateGame();
         console.log("Catchdle initialized securely.");
     } catch (error) {
-        if (audioMode && currentUser) document.getElementById("retryAudio").hidden = false;
+        if (route.audio && currentUser) document.getElementById("retryAudio").hidden = false;
         console.error("Error initializing Catchdle:", error);
         if (document.body.classList.contains("session-pending")) {
             document.getElementById("sessionStatusText").textContent = tr("Refresh to check your session.");
