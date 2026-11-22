@@ -217,6 +217,15 @@ function createCell(
 
     return cell;
 }
+function classicCell(label, value, status, arrow) {
+    const cell = createCell(value, status, arrow);
+    const field = document.createElement("small");
+    field.className = "mobile-field";
+    field.textContent = tr(label);
+    cell.prepend(field);
+    return cell;
+}
+
 function renderAttempt(attempt) {
     const map = attempt?.map;
     if (!map || !attemptsContainer) return;
@@ -252,12 +261,12 @@ function renderAttempt(attempt) {
         attemptsContainer.prepend(row);
         return;
     }
-    row.appendChild(createCell(map.artist || "-", comparison.artist || "wrong"));
-    row.appendChild(createCell(map.mapper || "-", comparison.mapper || "wrong"));
-    row.appendChild(createCell(twoDecimals.format(map.stars || 0), comparison.stars?.status || "wrong", comparison.stars?.arrow || ""));
-    row.appendChild(createCell(twoDecimals.format(map.bpm || 0), comparison.bpm?.status || "wrong", comparison.bpm?.arrow || ""));
-    row.appendChild(createCell(formatDuration(map.duration), comparison.length?.status || "wrong", comparison.length?.arrow || ""));
-    row.appendChild(createCell(map.ranked_year ?? "—", comparison.year?.status || "", comparison.year?.arrow || ""));
+    row.appendChild(classicCell("Artist", map.artist || "-", comparison.artist || "wrong"));
+    row.appendChild(classicCell("Mapper", map.mapper || "-", comparison.mapper || "wrong"));
+    row.appendChild(classicCell("Stars", twoDecimals.format(map.stars || 0), comparison.stars?.status || "wrong", comparison.stars?.arrow || ""));
+    row.appendChild(classicCell("BPM", twoDecimals.format(map.bpm || 0), comparison.bpm?.status || "wrong", comparison.bpm?.arrow || ""));
+    row.appendChild(classicCell("Length", formatDuration(map.duration), comparison.length?.status || "wrong", comparison.length?.arrow || ""));
+    row.appendChild(classicCell("Year", map.ranked_year ?? "—", comparison.year?.status || "", comparison.year?.arrow || ""));
     attemptsContainer.prepend(row);
 }
 
@@ -1801,7 +1810,7 @@ async function navigateGame() {
         if (!response.ok || !data.success) throw new Error(data.detail || data.error);
         applyGameState(data);
         message.textContent = "";
-        loadCovers(backgroundCollage, 30, signal);
+        loadCovers(backgroundCollage, window.matchMedia("(max-width: 680px)").matches ? 12 : 30, signal);
     } catch (error) {
         if (signal.aborted) return;
         message.textContent = tr("Try again in a moment.");

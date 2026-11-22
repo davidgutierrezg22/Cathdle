@@ -3334,3 +3334,53 @@ body:not(.media-mode) #attemptCount { color: #ffda70; }
 .brand-logo { display: block; width: 100%; height: auto; border-radius: 8px; }
 #loginTitle { max-width: 610px; }
 .hero .brand-logo { width: clamp(185px, 35vw, 335px); }
+
+.mobile-field { display: none; }
+@media (max-width: 680px) {
+    .background-collage { grid-template: repeat(4, 1fr) / repeat(3, 1fr); grid-auto-rows: 0; overflow: hidden; }
+    .background-collage .background-tile { min-height: 0; }
+    .container { width: min(calc(100% - 24px), 560px); }
+    .container .hero { padding: 14px 0 12px; }
+    .hero .logo-wrapper { gap: 6px; }
+    .hero .brand-logo { width: clamp(155px, 44vw, 220px); }
+    .hero .logo-ctb { margin: 0; width: 30px; height: 30px; }
+    .hero .game-modes { width: 100%; margin-top: 10px; }
+    .hero .game-modes a, #mediaLevels a {
+        display: grid; place-items: center; flex: 1; min-height: 44px; padding: 6px;
+    }
+    .hero .subtitle { margin-top: 10px; font-size: 16px; line-height: 1.3; }
+    #mediaLevels { max-width: 485px; margin-inline: auto; }
+    .container .search-area { gap: 6px; }
+    .search-area #mapInput { font-size: 16px; padding-inline: 10px; }
+    .search-area #guessButton { padding-inline: 12px; }
+    .search-area .suggestions { max-height: min(280px, 35dvh); }
+    .credits-button { min-width: 44px; width: auto; min-height: 44px; padding-inline: 8px; }
+    .credits-button > span:last-child { display: inline; }
+    .profile-button, .logout-button, .language-select { min-height: 44px; }
+    .profile-button { min-width: 44px; }
+    .login-content { margin-top: 40svh; padding: 18px 6vw max(30px, env(safe-area-inset-bottom)); }
+    .login-action { width: 100%; }
+    #audioPuzzle { padding: 12px; }
+    #clipControls:not([hidden]) {
+        display: grid; align-items: center; justify-items: center;
+        grid-template-columns: 44px 44px 44px 44px minmax(24px, 1fr) 44px;
+        grid-template-areas: "seek seek seek seek clock clock" "start play end mute volume loop";
+        gap: 2px; padding: 4px; border-radius: 8px;
+    }
+    #clipControls button { width: 44px; height: 44px; }
+    #clipControls input[type="range"] { width: 100%; height: 44px; }
+    #clipStart { grid-area: start; } #clipPlay { grid-area: play; } #clipEnd { grid-area: end; }
+    #clipSeek { grid-area: seek; } #clipClock { grid-area: clock; font-size: 11px; }
+    #clipMute { grid-area: mute; } #clipVolume { grid-area: volume; } #clipLoop { grid-area: loop; }
+
+    body:not(.media-mode) .results-table { min-width: 0; }
+    body:not(.media-mode) .results-header { display: none; }
+    body:not(.media-mode) .attempt-row {
+        grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; margin-bottom: 10px;
+        padding: 6px; background: var(--board-surface); border: 1px solid var(--board-edge); border-radius: 10px;
+    }
+    body:not(.media-mode) .attempt-map { grid-column: 1 / -1; }
+    body:not(.media-mode) .result-cell { flex-wrap: wrap; align-content: center; min-height: 48px; padding: 4px; }
+    .result-cell .mobile-field { display: block; width: 100%; font-size: 11px; line-height: 1.4; font-weight: 400; }
+    .result-cell .arrow { margin-left: 2px; }
+}
