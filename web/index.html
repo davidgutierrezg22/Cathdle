@@ -7,7 +7,7 @@
 
     <title>Catchdle</title>
 
-    <link rel="stylesheet" href="style.css?v=session-state">
+    <link rel="stylesheet" href="style.css?v=bg-levels">
 </head>
 
 <body class="session-pending">
@@ -163,6 +163,11 @@
         ====================================== -->
 
         <section id="bgPuzzle" aria-label="Mystery background" hidden>
+            <nav id="bgLevels" aria-label="Challenge difficulty">
+                <a href="?mode=background&amp;difficulty=easy">Easy</a>
+                <a href="?mode=background&amp;difficulty=medium">Medium</a>
+                <a href="?mode=background&amp;difficulty=hard">Hard</a>
+            </nav>
             <div class="bg-frame">
                 <img id="bgCrop" alt="Zoomed view of today's mystery beatmap background">
                 <button id="retryCrop" type="button" hidden>Retry image</button>
@@ -1073,7 +1078,7 @@
 
     <script src="languages.js?v=session-state"></script>
     <script src="player.js?v=1"></script>
-    <script src="script.js?v=session-state"></script>
+    <script src="script.js?v=bg-levels"></script>
 
 
 </body>

@@ -1701,6 +1701,12 @@ async function init() {
         document.getElementById(mediaMode ? requestedMode + "Mode" : "classicMode").setAttribute("aria-current", "page");
         if (mediaMode) {
             document.body.classList.add("media-mode");
+        } else {
+            const counter = attemptCount.parentElement;
+            counter.replaceChildren(attemptCount);
+            document.querySelector(".search-area").before(counter);
+        }
+        if (audioMode) {
             const select = document.getElementById("difficultySelect");
             select.value = difficulty;
             document.getElementById("mediaLevel").hidden = false;
@@ -1709,12 +1715,6 @@ async function init() {
                 url.searchParams.set("difficulty", select.value);
                 location.assign(url);
             });
-        } else {
-            const counter = attemptCount.parentElement;
-            counter.replaceChildren(attemptCount);
-            document.querySelector(".search-area").before(counter);
-        }
-        if (audioMode) {
             document.querySelector(".hero .subtitle").textContent = tr("Which song is playing?");
             document.getElementById("audioPuzzle").hidden = false;
             document.getElementById("attemptLimit").textContent = MAX_ATTEMPTS;
@@ -1727,6 +1727,13 @@ async function init() {
         }
         if (backgroundMode) {
             document.querySelector(".hero .subtitle").textContent = tr("Which beatmapset is this background from?");
+            for (const link of document.querySelectorAll("#bgLevels a")) {
+                const url = new URL(location.href);
+                const level = new URL(link.href).searchParams.get("difficulty");
+                url.searchParams.set("difficulty", level);
+                link.href = url.href;
+                if (level === difficulty) link.setAttribute("aria-current", "page");
+            }
             document.getElementById("bgPuzzle").hidden = false;
             const image = document.getElementById("bgCrop");
             const retry = document.getElementById("retryCrop");
