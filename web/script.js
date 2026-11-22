@@ -221,7 +221,7 @@ function renderAttempt(attempt) {
     const image = document.createElement("img");
     image.className = "attempt-cover";
     image.src = getCover(map);
-    image.alt = map.title || "Beatmap";
+    image.alt = map.title || tr("Beatmap");
     image.loading = "lazy";
     image.referrerPolicy = "no-referrer";
     image.onerror = function () { this.style.display = "none"; };
@@ -583,7 +583,7 @@ async function loadCurrentUser() {
     };
     avatar.src = currentUser.avatar_url || fallbackAvatar;
     avatar.alt = currentUser.username || tr("Avatar");
-    document.getElementById("username").textContent = currentUser.username || "User";
+    document.getElementById("username").textContent = currentUser.username || tr("User");
     document.getElementById("loggedUser").classList.remove("hidden");
     document.body.classList.remove("at-login");
 }
@@ -704,7 +704,7 @@ async function loadLeaderboard() {
                         const username =
                             escapeHTML(
                                 player.username ||
-                                "Unknown"
+                                tr("Unknown")
                             );
 
 
@@ -892,7 +892,7 @@ async function loadStats() {
         if (statsMessage) {
 
             statsMessage.textContent =
-                "You must be logged in.";
+                tr("You must be logged in.");
 
         }
 
@@ -1016,7 +1016,7 @@ async function loadStats() {
             statsUsername.textContent =
                 user.username ||
                 currentUser.username ||
-                "Player";
+                tr("Player");
 
         }
 

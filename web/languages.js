@@ -2,6 +2,8 @@ const languages = { en: "English", es: "Español", pt: "Português", fr: "Franç
 
 // English source, followed by Spanish, Portuguese, French and Japanese.
 const copy = [
+    ["Statistics","Estadísticas","Estatísticas","Statistiques","成績"],
+    ["You must be logged in.","Inicia sesión para ver tus estadísticas.","Entre para ver suas estatísticas.","Connecte-toi pour voir tes statistiques.","成績を見るにはログインしてください。"],
     ["Challenge difficulty", "Dificultad del reto", "Dificuldade do desafio", "Difficulté du défi", "チャレンジ難易度"],
     ["Easy", "Fácil", "Fácil", "Facile", "かんたん"],
     ["Medium", "Medio", "Médio", "Moyen", "ふつう"],
@@ -133,8 +135,7 @@ function tr(key, values = {}) {
     return (dictionary.get(key) ?? key).replace(/\{(\w+)\}/g, (match, name) => values[name] ?? match);
 }
 
-function translateInterface() {
-    document.documentElement.lang = locale;
+function translatePageText() {
     // Translate the HTML before gameplay inserts map titles and player names.
     const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
     while (walker.nextNode()) {
@@ -148,6 +149,11 @@ function translateInterface() {
             if (dictionary.has(key)) element.setAttribute(attribute, tr(key));
         }
     }
+}
+
+function translateInterface() {
+    document.documentElement.lang = locale;
+    if (locale !== "en") translatePageText();
     for (const select of document.querySelectorAll(".language-select")) {
         for (const [code, name] of Object.entries(languages)) {
             const option = new Option(name, code, false, code === locale);
