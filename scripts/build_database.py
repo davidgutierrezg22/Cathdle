@@ -149,7 +149,9 @@ def process_beatmapset(beatmapset):
     # CREAR ENTRADA DE NUESTRA BASE DE DATOS
     # --------------------------------------------------
 
+    ranked_date = beatmapset.get("ranked_date")
     result = {
+        "ranked_year": int(ranked_date[:4]) if ranked_date else None,
 
         "beatmapset_id":
             beatmapset.get("id"),

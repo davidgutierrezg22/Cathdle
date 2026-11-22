@@ -1067,7 +1067,8 @@ body {
         1.3fr
         1fr
         1fr
-        1.1fr;
+        1.1fr
+        minmax(64px, 0.9fr);
 
     gap:
         6px;
@@ -3149,7 +3150,7 @@ body:not(.at-login) > .login-screen {
 .container .attempt-counter { margin: 10px auto 0; color: #d0bdca; }
 .container .message:empty { display: none; }
 .container .results-section { max-width: 800px; margin: 24px auto 10px; }
-.results-section .results-table { min-width: 600px; }
+.results-section .results-table { min-width: 670px; }
 .results-header > div {
     text-align: center;
     border-bottom: 2px solid #b691a7;

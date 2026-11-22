@@ -246,6 +246,7 @@ function renderAttempt(attempt) {
     row.appendChild(createCell(twoDecimals.format(map.stars || 0), comparison.stars?.status || "wrong", comparison.stars?.arrow || ""));
     row.appendChild(createCell(twoDecimals.format(map.bpm || 0), comparison.bpm?.status || "wrong", comparison.bpm?.arrow || ""));
     row.appendChild(createCell(formatDuration(map.duration), comparison.length?.status || "wrong", comparison.length?.arrow || ""));
+    row.appendChild(createCell(map.ranked_year ?? "—", comparison.year?.status || "", comparison.year?.arrow || ""));
     attemptsContainer.prepend(row);
 }
 

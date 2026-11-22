@@ -1281,6 +1281,7 @@ def public_map(map_data):
         return None
     return {
         **search_map(map_data),
+        "ranked_year": map_data.get("ranked_year"),
         "stars": float(map_data.get("stars", 0) or 0),
         "bpm": float(map_data.get("bpm", 0) or 0),
         "duration": int(map_data.get("duration", 0) or 0),
@@ -1322,7 +1323,10 @@ def comparison_number(value, answer, close_range):
 
 
 def comparison_for(guess, answer):
+    guess_year = guess.get("ranked_year")
+    answer_year = answer.get("ranked_year")
     return {
+        "year": comparison_number(guess_year, answer_year, 1) if guess_year and answer_year else None,
         "artist": comparison_text(guess.get("artist"), answer.get("artist")),
         "mapper": comparison_text(guess.get("mapper"), answer.get("mapper")),
         "stars": comparison_number(guess.get("stars"), answer.get("stars"), STAR_CLOSE_RANGE),

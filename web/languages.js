@@ -42,6 +42,8 @@ const copy = [
     ["Artist","Artista","Artista","Artiste","アーティスト"],
     ["Mapper","Mapper","Mapper","Mapper","マッパー"],
     ["Stars","Estrellas","Estrelas","Étoiles","難易度"],
+    ["Year", "Año", "Ano", "Année", "年"],
+    ["The year is when the set became Ranked or Loved. Yellow means one year off.", "El año indica cuándo el set pasó a Ranked o Loved. Amarillo significa un año de diferencia.", "O ano indica quando o set virou Ranked ou Loved. Amarelo indica um ano de diferença.", "L’année indique quand le set est passé Ranked ou Loved. Le jaune indique un an d’écart.", "年は譜面セットが Ranked または Loved になった年です。黄色は1年差を表します。"],
     ["Length","Duración","Duração","Durée","長さ"],
     ["Color indicators","Guía de colores","Guia de cores","Légende","色の見方"],
     ["Correct","Acierto","Certo","Exact","正解"],
