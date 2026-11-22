@@ -573,7 +573,10 @@ async function loadCurrentUser() {
 
     const data = await response.json();
     currentUser = data.logged_in ? data.user : null;
-    if (!currentUser) return;
+    if (!currentUser) {
+        document.body.classList.replace("session-pending", "at-login");
+        return;
+    }
 
     const avatar = document.getElementById("userAvatar");
     const fallbackAvatar = "https://osu.ppy.sh/images/layout/avatar-guest.png";
@@ -585,7 +588,7 @@ async function loadCurrentUser() {
     avatar.alt = currentUser.username || tr("Avatar");
     document.getElementById("username").textContent = currentUser.username || tr("User");
     document.getElementById("loggedUser").classList.remove("hidden");
-    document.body.classList.remove("at-login");
+    document.body.classList.remove("session-pending");
 }
 
 /* =========================================================
@@ -1742,8 +1745,11 @@ async function init() {
     } catch (error) {
         if (audioMode && currentUser) document.getElementById("retryAudio").hidden = false;
         console.error("Error initializing Catchdle:", error);
-        if (document.body.classList.contains("at-login")) {
-            document.querySelector(".login-note").textContent = tr("Refresh to check your session.");
+        if (document.body.classList.contains("session-pending")) {
+            document.getElementById("sessionStatusText").textContent = tr("Refresh to check your session.");
+            const retry = document.getElementById("retrySession");
+            retry.hidden = false;
+            retry.onclick = () => location.reload();
         } else {
             showMessage(error.message || "Could not load Catchdle. Check the server.", "error");
         }

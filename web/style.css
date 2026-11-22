@@ -3031,11 +3031,23 @@ body {
 }
 
 /* Standalone osu! sign-in */
+body.session-pending > :not(.session-status),
+body:not(.session-pending) > .session-status,
 body.at-login > :not(.login-screen),
 body:not(.at-login) > .login-screen {
     display: none;
 }
 
+
+.session-status {
+    min-height: 100svh;
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    justify-content: center;
+    color: #d0bdca;
+}
+.session-status button { font: inherit; cursor: pointer; }
 
 .login-screen {
     position: relative;

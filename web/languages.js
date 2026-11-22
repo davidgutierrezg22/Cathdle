@@ -2,6 +2,8 @@ const languages = { en: "English", es: "Español", pt: "Português", fr: "Franç
 
 // English source, followed by Spanish, Portuguese, French and Japanese.
 const copy = [
+    ["Loading…","Cargando…","Carregando…","Chargement…","読み込み中…"],
+    ["Retry","Reintentar","Tentar novamente","Réessayer","再試行"],
     ["Statistics","Estadísticas","Estatísticas","Statistiques","成績"],
     ["You must be logged in.","Inicia sesión para ver tus estadísticas.","Entre para ver suas estatísticas.","Connecte-toi pour voir tes statistiques.","成績を見るにはログインしてください。"],
     ["Challenge difficulty", "Dificultad del reto", "Dificuldade do desafio", "Difficulté du défi", "チャレンジ難易度"],

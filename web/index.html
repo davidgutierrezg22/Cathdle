@@ -7,10 +7,14 @@
 
     <title>Catchdle</title>
 
-    <link rel="stylesheet" href="style.css?v=media-levels">
+    <link rel="stylesheet" href="style.css?v=session-state">
 </head>
 
-<body class="at-login">
+<body class="session-pending">
+    <div class="session-status" role="status">
+        <span id="sessionStatusText">Loading…</span>
+        <button id="retrySession" type="button" hidden>Retry</button>
+    </div>
     <main id="loginScreen" class="login-screen" aria-labelledby="loginTitle">
         <div id="loginCovers" class="login-covers" aria-hidden="true"></div>
         <div class="login-language"><select class="language-select" aria-label="Language"></select></div>
@@ -1067,9 +1071,9 @@
          JAVASCRIPT
     ========================================== -->
 
-    <script src="languages.js?v=languages-2"></script>
+    <script src="languages.js?v=session-state"></script>
     <script src="player.js?v=1"></script>
-    <script src="script.js?v=languages-2"></script>
+    <script src="script.js?v=session-state"></script>
 
 
 </body>
