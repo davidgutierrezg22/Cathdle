@@ -83,7 +83,7 @@ if ENVIRONMENT == "production" and not COOKIE_SECURE:
 
 app = FastAPI(
     title="Catchdle API",
-    version="3.0.3",
+    version="3.0.4",
     docs_url=None if ENVIRONMENT == "production" else "/docs",
     redoc_url=None if ENVIRONMENT == "production" else "/redoc",
 )

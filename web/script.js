@@ -313,6 +313,10 @@ function renderGuessSummary() {
         if (result.exact !== undefined) {
             data.className = "exact";
             data.textContent = "✓ " + format(result.exact);
+            if (field === "artist" || field === "mapper") {
+                data.classList.add("exact-name");
+                data.title = String(result.exact);
+            }
         } else {
             for (const [bound, arrow] of [[result.lower, "↑"], [result.upper, "↓"]]) {
                 if (!bound) continue;
