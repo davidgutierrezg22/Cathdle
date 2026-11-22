@@ -3330,3 +3330,7 @@ body:not(.media-mode) #attemptCount { color: #ffda70; }
 #mediaLevels:not([hidden]) { display: flex; justify-content: center; gap: 6px; margin: 0 0 12px; }
 #mediaLevels a { padding: 8px 13px; border: 1px solid #73636d; border-radius: 6px; color: #f5eef3; background: #191b26; text-decoration: none; font-weight: 600; }
 #mediaLevels a[aria-current="page"] { background: #ff80b8; border-color: #ff80b8; color: #290e1c; }
+
+.brand-logo { display: block; width: 100%; height: auto; border-radius: 8px; }
+#loginTitle { max-width: 610px; }
+.hero .brand-logo { width: clamp(185px, 35vw, 335px); }
