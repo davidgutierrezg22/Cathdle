@@ -3327,9 +3327,6 @@ body:not(.media-mode) #attemptCount { color: #ffda70; }
     #summaryValues { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
 
-#mediaLevel:not([hidden]) { display: inline-flex; align-items: center; gap: 8px; margin-top: 12px; font-size: 14px; }
-#difficultySelect { font: inherit; color: #f5eef3; background: #191b26; border: 1px solid #73636d; border-radius: 6px; padding: 5px 8px; }
-
-#bgLevels { display: flex; justify-content: center; gap: 6px; margin: 0 0 12px; }
-#bgLevels a { padding: 8px 13px; border: 1px solid #73636d; border-radius: 6px; color: #f5eef3; background: #191b26; text-decoration: none; font-weight: 600; }
-#bgLevels a[aria-current="page"] { background: #ff80b8; border-color: #ff80b8; color: #290e1c; }
+#mediaLevels:not([hidden]) { display: flex; justify-content: center; gap: 6px; margin: 0 0 12px; }
+#mediaLevels a { padding: 8px 13px; border: 1px solid #73636d; border-radius: 6px; color: #f5eef3; background: #191b26; text-decoration: none; font-weight: 600; }
+#mediaLevels a[aria-current="page"] { background: #ff80b8; border-color: #ff80b8; color: #290e1c; }

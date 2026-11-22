@@ -7,7 +7,7 @@
 
     <title>Catchdle</title>
 
-    <link rel="stylesheet" href="style.css?v=bg-levels">
+    <link rel="stylesheet" href="style.css?v=3.0">
 </head>
 
 <body class="session-pending">
@@ -142,14 +142,6 @@
                 <a href="?mode=background" id="backgroundMode">Background</a>
                 <a href="?mode=audio" id="audioMode">Audio</a>
             </nav>
-            <label id="mediaLevel" hidden>
-                <span>Challenge difficulty</span>
-                <select id="difficultySelect">
-                    <option value="easy">Easy</option>
-                    <option value="medium" selected>Medium</option>
-                    <option value="hard">Hard</option>
-                </select>
-            </label>
             <p class="subtitle">
                 Guess the daily osu!catch beatmapset.
             </p>
@@ -162,12 +154,12 @@
              SEARCH
         ====================================== -->
 
+        <nav id="mediaLevels" aria-label="Challenge difficulty" hidden>
+            <a href="?difficulty=easy">Easy</a>
+            <a href="?difficulty=medium">Medium</a>
+            <a href="?difficulty=hard">Hard</a>
+        </nav>
         <section id="bgPuzzle" aria-label="Mystery background" hidden>
-            <nav id="bgLevels" aria-label="Challenge difficulty">
-                <a href="?mode=background&amp;difficulty=easy">Easy</a>
-                <a href="?mode=background&amp;difficulty=medium">Medium</a>
-                <a href="?mode=background&amp;difficulty=hard">Hard</a>
-            </nav>
             <div class="bg-frame">
                 <img id="bgCrop" alt="Zoomed view of today's mystery beatmap background">
                 <button id="retryCrop" type="button" hidden>Retry image</button>
@@ -1078,7 +1070,7 @@
 
     <script src="languages.js?v=session-state"></script>
     <script src="player.js?v=1"></script>
-    <script src="script.js?v=bg-levels"></script>
+    <script src="script.js?v=3.0"></script>
 
 
 </body>
